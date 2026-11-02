@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DOIntelligence · Your Money. Your Markets. Your Intelligence.</title>
+<style>
+:root{--bg:#f3f4f2;--surf:#fff;--fg:#151a21;--mut:#697386;--line:#dde0e4;--acc:#2f48d8;--up:#12804a;--dn:#c2372b;--c0:#2f48d8;--c1:#2a9d8f;--c2:#e0a526;--c3:#7b6bd6;--c4:#8a97a8;--c5:#c9784a}
+:root[data-theme=dark]{--bg:#0b0f17;--surf:#121927;--fg:#e8ecf4;--mut:#8a94a8;--line:#1f2938;--acc:#7c9cff;--up:#3ddc97;--dn:#ff6b6b;--c0:#7c9cff;color-scheme:dark}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0b0f17;--surf:#121927;--fg:#e8ecf4;--mut:#8a94a8;--line:#1f2938;--acc:#7c9cff;--up:#3ddc97;--dn:#ff6b6b;--c0:#7c9cff;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "IBM Plex Sans","Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:210px minmax(0,1fr) auto;min-height:100vh}
+nav{padding:28px 0;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh}
+.brand{padding:0 24px 24px;font-weight:600;letter-spacing:-.01em;font-size:1.05rem}
+nav a{padding:8px 24px;color:var(--mut);text-decoration:none;border-left:2px solid transparent}
+nav a:hover{color:var(--fg)}
+nav a.on{color:var(--fg);font-weight:600;border-left-color:var(--acc)}
+nav small{margin-top:auto;padding:0 24px;color:var(--mut);font-size:.8rem}
+main{padding:28px clamp(16px,3vw,40px) 64px;width:100%;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--mut);font-size:.85rem;margin-bottom:28px;flex-wrap:wrap}
+button{font:inherit;padding:.45rem .85rem;border:1px solid var(--line);background:var(--surf);color:var(--fg);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--mut)}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+h1{font-size:clamp(2rem,5vw,3.1rem);font-weight:600;letter-spacing:-.025em;margin:0;line-height:1.1}
+h1.pg{font-size:1.5rem;margin-bottom:20px;letter-spacing:-.015em}
+h2{font-size:.95rem;font-weight:600;margin:0 0 12px}
+section{margin-bottom:44px}
+.lab{margin:0 0 6px;color:var(--mut);font-size:.88rem}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.hero{display:grid;gap:22px}
+.ln{width:100%;height:200px;display:block}
+.ln .st{fill:none;stroke:var(--acc);stroke-width:1.6}
+.ln .ar{fill:var(--acc);opacity:.08}
+.sp{width:92px;height:26px;display:block}
+.sp .st{fill:none;stroke-width:1.5}
+.sp.up .st{stroke:var(--up)}.sp.dn .st{stroke:var(--dn)}
+#rd{color:var(--mut);font-size:.85rem;min-height:1.4em}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:24px;margin-bottom:24px}
+.alo{display:flex;gap:24px;align-items:center}
+.dono{width:150px;flex:none;transform:rotate(0)}
+.leg{list-style:none;margin:0;padding:0;display:grid;gap:6px;flex:1;font-size:.9rem}
+.leg li{display:flex;justify-content:space-between;gap:8px}
+.leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px}
+.pb{display:grid;gap:10px}
+.pb div{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;align-items:center;font-size:.88rem}
+.tr{height:8px;position:relative;background:color-mix(in srgb,var(--line) 60%,transparent);border-radius:2px}
+.tr b{position:absolute;top:0;height:100%;border-radius:2px}
+.tr.c::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--mut)}
+.sc{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{font-weight:500;color:var(--mut);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;padding-left:0}
+td small{display:block;color:var(--mut);font-size:.8rem}
+td.l,th.l{text-align:left}
+.seg{display:inline-flex;margin-bottom:22px}
+.seg button{border-radius:0}.seg button:first-child{border-radius:6px 0 0 6px}.seg button:last-child{border-radius:0 6px 6px 0;border-left:0}
+.seg button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:36px;margin-bottom:36px}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:10px;align-content:start}
+legend{font-weight:600;font-size:.95rem;margin-bottom:10px;padding:0}
+label{display:grid;gap:4px;color:var(--mut);font-size:.84rem}
+input,select{font:inherit;width:100%;padding:.45rem .6rem;border:1px solid var(--line);border-radius:6px;background:var(--surf);color:var(--fg)}
+dl{margin:0;display:grid;gap:0}
+dl div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+dt{color:var(--mut)}dd{margin:0;font-weight:600;text-align:right}
+.note{color:var(--mut);font-size:.85rem;margin:10px 0 0}
+.hu{background:color-mix(in srgb,var(--up) 14%,transparent)}.hd{background:color-mix(in srgb,var(--dn) 14%,transparent)}
+td.hu,td.hd{text-align:center}
+.bar{width:100%;height:160px;display:block;margin-top:14px}
+.bar .ax{stroke:var(--line)}.bar .rp{fill:var(--up)}.bar .rn{fill:var(--dn)}
+.alr{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:26px}.alr label{min-width:130px}
+.chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:.8rem;border:1px solid var(--line)}
+.chip.t{border-color:var(--up);color:var(--up)}
+.nl{list-style:none;margin:0;padding:0}.nl li{display:grid;grid-template-columns:70px 1fr 56px;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.pn{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:20px}
+.ac{display:block;max-width:100%;touch-action:pan-y}
+.ac .gr{stroke:var(--line);stroke-dasharray:2 4}.ac .tx{fill:var(--mut);font-size:11px}.ac .cx{stroke:var(--mut);stroke-dasharray:3 3}
+.rng{display:flex;gap:4px}.rng button{padding:.25rem .7rem;font-size:.82rem;border-radius:99px}.rng button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.hd2{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.kp{display:flex;gap:28px;flex-wrap:wrap}.kp div{display:grid;gap:2px}.kp span{color:var(--mut);font-size:.82rem}.kp b{font-size:1rem}
+.dw{width:160px;flex:none}.dw .dono{width:100%;display:block}
+.dc{font-size:4px;font-weight:600;fill:var(--fg)}.ds{font-size:2.5px;fill:var(--mut)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}.chips button{border-radius:99px;font-size:.85rem;padding:.3rem .85rem}.chips button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.sp{width:110px;height:30px}
+.lg{all:unset;display:flex;justify-content:space-between;gap:8px;width:100%;cursor:pointer;padding:5px 8px;border-radius:6px;box-sizing:border-box}.lg:hover{background:color-mix(in srgb,var(--fg) 7%,transparent)}.lg:focus-visible{outline:2px solid var(--acc)}.lg.off{opacity:.45;text-decoration:line-through}
+section.pn{margin-bottom:24px}
+@media(max-width:640px){.hm{display:none}.pn{padding:14px;border-radius:10px}main{padding-top:16px}h1{font-size:2rem}.kp{gap:18px}}
+.chat{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+.cl{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:460px;padding:0}
+.log{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+.m{max-width:min(640px,88%);padding:10px 14px;border-radius:14px;line-height:1.55;font-size:.94rem}
+.m.ai{align-self:flex-start;border:1px solid var(--line);border-bottom-left-radius:4px}
+.m.me{align-self:flex-end;background:color-mix(in srgb,var(--acc) 14%,transparent);border-bottom-right-radius:4px}
+.cin{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
+.cin textarea{flex:1;font:inherit;resize:none;max-height:140px;padding:.55rem .7rem;border:1px solid var(--line);border-radius:8px;background:var(--surf);color:var(--fg)}
+.qs{display:grid;gap:8px}.qs button{text-align:left;border-radius:8px}
+.ck{display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;padding:3px 0}.ck input{width:auto}
+.dt{display:inline-flex;gap:4px;padding:4px 0}.dt i{width:6px;height:6px;border-radius:50%;background:var(--mut);animation:bl 1s infinite}.dt i:nth-child(2){animation-delay:.15s}.dt i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.dt i{animation:none}}
+@media(max-width:900px){.chat{grid-template-columns:1fr}.cl{height:72vh}}
+aside{position:sticky;top:0;height:100vh;width:360px;border-left:1px solid var(--line);background:var(--surf);display:flex;flex-direction:column}
+aside.wide{width:min(580px,42vw)}aside.off{display:none}
+.ah{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.ah b{font-size:.98rem}.ah small{display:block;color:var(--mut);font-size:.78rem}.ah>div:last-child{display:flex;gap:6px}
+.ib{padding:.3rem .6rem;font-size:.82rem}
+.ctxd{padding:10px 16px;border-bottom:1px solid var(--line);font-size:.85rem}.ctxd summary{cursor:pointer;color:var(--mut)}
+.sq{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px 0}.sq button{font-size:.8rem;padding:.25rem .7rem;border-radius:99px;text-align:left}
+.lnc{position:fixed;right:20px;bottom:20px;z-index:15;border-radius:99px;padding:.65rem 1.1rem;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.brand b{display:block;font-size:1.15rem;letter-spacing:-.02em}
+.tg{margin:4px 0 0;font-size:.78rem;color:var(--fg);line-height:1.35;font-weight:500}.ds2{margin:8px 0 0;font-size:.78rem;color:var(--mut);line-height:1.4;font-weight:400}
+.mb{display:none;font-weight:650;color:var(--fg)}
+@media(max-width:1100px){aside{position:fixed;right:0;top:0;bottom:0;z-index:20;width:min(100%,420px)!important;box-shadow:-8px 0 30px rgba(0,0,0,.2)}}
+@media(max-width:860px){
+ .app{grid-template-columns:1fr}
+ nav{height:auto;position:sticky;top:0;z-index:2;flex-direction:row;overflow-x:auto;padding:10px 12px;background:var(--bg);border-right:0;border-bottom:1px solid var(--line)}
+ .brand,nav small{display:none}
+ .mb{display:inline}
+ nav a{padding:6px 12px;border-left:0;border-bottom:2px solid transparent;white-space:nowrap}
+ nav a.on{border-bottom-color:var(--acc)}
+ .two,.grid3{grid-template-columns:1fr;gap:32px}
+ .alo{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<nav id="nav"></nav>
+<main>
+<div class="top"><span class="mb">DOIntelligence</span><span id="stat"></span><div style="display:flex;gap:8px"><button id="th"></button><button id="reload">Muat ulang data</button></div></div>
+<div id="view"></div>
+</main>
+<aside id="ai" aria-label="Asisten AI"></aside>
+</div>
+<button class="lnc pri" id="ln" hidden>Tanya asisten</button>
+<script>
+const $=s=>document.querySelector(s);
+const idr=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
+const cmp=n=>new Intl.NumberFormat('id-ID',{notation:'compact',maximumFractionDigits:2}).format(n);
+const money=x=>'Rp'+cmp(x*1e6);
+const pct=n=>(n>=0?'+':'')+n.toFixed(2).replace('.',',')+'%';
+const cls=n=>n>=0?'up':'dn';
+const rnd=s=>()=>(s=s*16807%2147483647)/2147483647;
+const walk=(seed,n,vol)=>{const r=rnd(seed),a=[1];for(let i=1;i<n;i++)a.push(a[i-1]*(1+(r()-.48)*vol));return a};
+const get=async u=>{const c=new AbortController();setTimeout(()=>c.abort(),8000);const r=await fetch(u,{signal:c.signal});if(!r.ok)throw 0;return r.json()};
+
+/* ---------- Data dummy ---------- */
+const W=[
+{s:'BBCA',n:'Bank Central Asia',c:'Saham IDX',p:9875},
+{s:'BBRI',n:'Bank Rakyat Indonesia',c:'Saham IDX',p:4120},
+{s:'TLKM',n:'Telkom Indonesia',c:'Saham IDX',p:3380},
+{s:'AAPL',n:'Apple',c:'Saham global',p:3420000},
+{s:'BTC',n:'Bitcoin',c:'Kripto',p:1.55e9,id:'bitcoin'},
+{s:'ETH',n:'Ethereum',c:'Kripto',p:5.6e7,id:'ethereum'},
+{s:'SOL',n:'Solana',c:'Kripto',p:3.1e6,id:'solana'},
+{s:'USD/IDR',n:'Dolar AS',c:'Forex',p:16500},
+{s:'EMAS',n:'Emas per gram',c:'Emas',p:2150000},
+{s:'RDPU',n:'Reksa dana pasar uang',c:'Reksa dana',p:1850}
+];
+const mk=(a,i)=>{const s=walk(i+1,30,.015),k=a.p/s[29];a.spark=s.map(x=>x*k);a.ch=(s[29]/s[28]-1)*100;a.src='Dummy'};
+W.forEach(mk);
+const H=[{s:'BBCA',q:1200,avg:9200},{s:'TLKM',q:3000,avg:3600},{s:'AAPL',q:1.5,avg:3100000},{s:'BTC',q:.012,avg:1.2e9},{s:'ETH',q:.4,avg:4.6e7},{s:'EMAS',q:20,avg:1.9e6},{s:'RDPU',q:8000,avg:1700}];
+let A=[{s:'BTC',d:'>=',t:1.6e9},{s:'BBCA',d:'<=',t:9500}];
+const S=[
+{s:'BBCA',t:'Laba kuartalan perbankan melampaui perkiraan analis',v:.62},
+{s:'BBCA',t:'Pertumbuhan kredit korporasi melambat',v:-.25},
+{s:'BBRI',t:'Penyaluran kredit mikro tumbuh stabil',v:.4},
+{s:'TLKM',t:'Rencana pelepasan aset menekan harapan dividen',v:-.48},
+{s:'BTC',t:'Arus dana ke produk kripto institusional meningkat',v:.55},
+{s:'ETH',t:'Biaya jaringan turun, aktivitas pengguna datar',v:.05},
+{s:'EMAS',t:'Permintaan aset aman naik saat suku bunga tak pasti',v:.35},
+{s:'USD/IDR',t:'Rupiah melemah terbatas jelang rilis data inflasi',v:-.3}];
+const F={mode:'A'};
+
+/* ---------- Grafik SVG ---------- */
+function lineSvg(v,o={}){const w=o.w||640,h=o.h||200,mn=Math.min(...v),mx=Math.max(...v),sx=w/(v.length-1),y=x=>h-4-(x-mn)/(mx-mn||1)*(h-8);
+ const p=v.map((x,i)=>(i?'L':'M')+(i*sx).toFixed(1)+' '+y(x).toFixed(1)).join('');
+ return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="${o.c||'ln'}" ${o.id||''}>${o.area===0?'':`<path d="${p}L${w} ${h}L0 ${h}Z" class="ar"/>`}<path d="${p}" class="st" vector-effect="non-scaling-stroke"/></svg>`}
+function donut(parts,c1,c2){const t=parts.reduce((a,b)=>a+b.v,0);let o=25;
+ return `<svg viewBox="0 0 42 42" class="dono">${parts.map((p,i)=>{const d=p.v/t*100,s=`<circle r="15.9155" cx="21" cy="21" fill="none" stroke="var(--c${(p.i??i)%6})" stroke-width="5" stroke-dasharray="${Math.max(d-.7,.1)} ${100-d+.7}" stroke-dashoffset="${o}"/>`;o-=d;return s}).join('')}<text x="21" y="21.4" text-anchor="middle" class="dc">${c1}</text><text x="21" y="25.4" text-anchor="middle" class="ds">${c2}</text></svg>`}
+function areaChart(el,v,fx,fy,idle){
+ const w=el.clientWidth||600,h=w<520?210:280,pl=48,pr=10,pt=10,pb=24,a=Math.min(...v),b=Math.max(...v),pd=(b-a)*.12||1,mn=a-pd,mx=b+pd,
+ X=i=>pl+i/(v.length-1)*(w-pl-pr),Y=x=>pt+(1-(x-mn)/(mx-mn))*(h-pt-pb),
+ p=v.map((x,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join(''),col=v.at(-1)>=v[0]?'var(--up)':'var(--dn)';
+ let g='',xt='';
+ for(let k=0;k<4;k++){const y=Y(mn+(mx-mn)*k/3);g+=`<line x1="${pl}" x2="${w-pr}" y1="${y}" y2="${y}" class="gr"/><text x="${pl-7}" y="${y+4}" class="tx" text-anchor="end">${fy(mn+(mx-mn)*k/3)}</text>`}
+ for(let k=0;k<5;k++){const i=Math.round(k*(v.length-1)/4);xt+=`<text x="${X(i)}" y="${h-6}" class="tx" text-anchor="${k==0?'start':k==4?'end':'middle'}">${fx(i)}</text>`}
+ el.innerHTML=`<svg width="${w}" height="${h}" class="ac"><defs><linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".22"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>${g}${xt}<path d="${p}L${X(v.length-1)} ${h-pb}L${pl} ${h-pb}Z" fill="url(#gd)"/><path d="${p}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/><line id="cx" y1="${pt}" y2="${h-pb}" class="cx" style="display:none"/><circle id="cd" r="4.5" fill="${col}" stroke="var(--surf)" stroke-width="2" style="display:none"/></svg>`;
+ const s=el.firstChild,cx=s.querySelector('#cx'),cd=s.querySelector('#cd'),mv=e=>{const r=s.getBoundingClientRect(),px=(e.touches?e.touches[0].clientX:e.clientX)-r.left,i=Math.max(0,Math.min(v.length-1,Math.round((px-pl)/(w-pl-pr)*(v.length-1))));
+  cx.style.display=cd.style.display='';cx.setAttribute('x1',X(i));cx.setAttribute('x2',X(i));cd.setAttribute('cx',X(i));cd.setAttribute('cy',Y(v[i]));$('#rd').innerHTML=`<b>${fx(i)}</b> · ${fy(v[i],1)}`};
+ s.onmousemove=mv;s.ontouchmove=mv;s.ontouchstart=mv;
+ s.onmouseleave=s.ontouchend=()=>{cx.style.display=cd.style.display='none';$('#rd').innerHTML=idle()}}
+function bars(v){const w=640,h=160,mx=Math.max(...v.map(Math.abs))||1,bw=w/v.length,z=h/2;
+ return `<svg viewBox="0 0 ${w} ${h}" class="bar"><line x1="0" x2="${w}" y1="${z}" y2="${z}" class="ax"/>`+v.map((x,i)=>{const bh=Math.abs(x)/mx*(z-6);return `<rect x="${i*bw+bw*.18}" width="${bw*.64}" y="${x>=0?z-bh:z}" height="${bh}" class="${x>=0?'rp':'rn'}"/>`}).join('')+'</svg>'}
+const dvr=(v,max)=>`<div class="tr c"><b class="${v>=0?'':'x'}" style="${v>=0?'left:50%':'right:50%'};width:${Math.min(Math.abs(v)/max,1)*50}%;background:var(--${v>=0?'up':'dn'})"></b></div>`;
+
+/* ---------- Tampilan ---------- */
+let RG=90,WF='Semua';const HID=new Set();
+const SER=walk(77,180,.011);
+function dash(){
+ const rows=H.map(h=>{const a=W.find(x=>x.s===h.s),v=h.q*a.p,cost=h.q*h.avg;return{...h,a,v,cost,pl:v-cost}});
+ const tot=rows.reduce((s,r)=>s+r.v,0),cost=rows.reduce((s,r)=>s+r.cost,0),pl=tot-cost;
+ const by={};rows.forEach(r=>by[r.a.c]=(by[r.a.c]||0)+r.v);
+ const parts=Object.entries(by).map(([k,v])=>({k,v}));
+ const all=SER.map(x=>x*tot/SER[179]),rk=[...rows].sort((a,b)=>b.pl/b.cost-a.pl/a.cost),f=r=>r.s+' '+pct(r.pl/r.cost*100);
+ const mx=Math.max(...rows.map(r=>Math.abs(r.pl/r.cost*100)));
+ $('#view').innerHTML=`
+ <section class="pn"><div class="hd2"><div><p class="lab">Nilai portofolio</p><h1>${idr(tot)}</h1>
+ <p class="${cls(pl)}" style="margin:6px 0 0">${pct(pl/cost*100)} (${idr(pl)}) dari modal ${idr(cost)}</p></div>
+ <div class="kp"><div><span>Terbaik</span><b class="up">${f(rk[0])}</b></div><div><span>Terlemah</span><b class="${cls(rk.at(-1).pl)}">${f(rk.at(-1))}</b></div><div><span>Jumlah aset</span><b>${rows.length}</b></div></div></div>
+ <div class="hd2" style="margin:24px 0 8px"><div id="rd" style="min-height:1.5em"></div><div class="rng">${[7,30,90,180].map(d=>`<button data-r="${d}" class="${d===RG?'on':''}">${d} hari</button>`).join('')}</div></div><div id="big"></div></section>
+ <section class="two"><div class="pn"><h2>Alokasi aset</h2><div class="alo" id="alo"></div><p class="note">Klik kelas aset untuk menyembunyikan atau menampilkan.</p></div>
+ <div class="pn"><h2>Untung atau rugi per aset</h2><div class="pb">${rows.map(r=>{const p=r.pl/r.cost*100;return `<div><span>${r.s}</span>${dvr(p,mx)}<span class="${cls(p)}" style="text-align:right">${pct(p)}</span></div>`}).join('')}</div></div></section>
+ <section class="pn sc"><h2>Posisi</h2><table><tr><th>Aset</th><th class="hm">Jumlah</th><th class="hm">Harga rata-rata</th><th>Harga kini</th><th>Nilai</th><th>Untung atau rugi</th></tr>
+ ${rows.map(r=>`<tr><td>${r.s}<small>${r.a.c}</small></td><td class="hm">${r.q.toLocaleString('id-ID',{maximumFractionDigits:4})}</td><td class="hm">${idr(r.avg)}</td><td>${idr(r.a.p)}</td><td>${idr(r.v)}</td><td class="${cls(r.pl)}">${idr(r.pl)}<small>${pct(r.pl/r.cost*100)}</small></td></tr>`).join('')}</table></section>`;
+ const alo=()=>{const vis=parts.filter(p=>!HID.has(p.k)),t=vis.reduce((a,p)=>a+p.v,0);
+  $('#alo').innerHTML=`<div class="dw">${vis.length?donut(vis.map(p=>({...p,i:parts.indexOf(p)})),'Rp'+cmp(t),vis.length+' dari '+parts.length+' kelas'):donut([{v:1,i:4}],'Kosong','semua disembunyikan')}</div><ul class="leg">${parts.map((p,i)=>`<li><button class="lg ${HID.has(p.k)?'off':''}" data-k="${p.k}" aria-pressed="${!HID.has(p.k)}"><span><i style="background:var(--c${i%6})"></i>${p.k}</span><span>${HID.has(p.k)?'—':(p.v/t*100).toFixed(1).replace('.',',')+'%'}</span></button></li>`).join('')}</ul>`;
+  document.querySelectorAll('.lg').forEach(b=>b.onclick=()=>{HID.has(b.dataset.k)?HID.delete(b.dataset.k):HID.add(b.dataset.k);alo()})};
+ const draw=()=>{const v=all.slice(-RG),idle=()=>`Perubahan ${RG} hari: <b class="${cls(v.at(-1)-v[0])}">${pct((v.at(-1)/v[0]-1)*100)}</b> · arahkan kursor ke grafik untuk detail harian`;
+  $('#rd').innerHTML=idle();areaChart($('#big'),v,i=>new Date(Date.now()-(v.length-1-i)*864e5).toLocaleDateString('id-ID',{day:'numeric',month:'short'}),(x,full)=>full?idr(x):'Rp'+cmp(x),idle)};
+ alo();draw();document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{RG=+b.dataset.r;document.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x===b));draw()});
+ window.onresize=()=>{if(!location.hash.slice(1))draw()};
+}
+function watch(){
+ const cs=['Semua',...new Set(W.map(a=>a.c))],L=W.filter(a=>WF==='Semua'||a.c===WF);
+ $('#view').innerHTML=`<h1 class="pg">Watchlist</h1><div class="chips">${cs.map(c=>`<button data-f="${c}" class="${c===WF?'on':''}">${c}</button>`).join('')}</div>
+ <div class="pn sc"><table><tr><th>Aset</th><th>Harga</th><th>24 jam</th><th class="hm">7 hari</th><th class="l hm">Sumber</th></tr>
+ ${L.map(a=>`<tr><td>${a.s}<small>${a.n}</small></td><td>${idr(a.p)}</td><td class="${cls(a.ch)}">${pct(a.ch)}</td><td class="hm">${lineSvg(a.spark,{w:110,h:30,area:0,c:'sp '+cls(a.spark.at(-1)-a.spark[0])})}</td><td class="l hm">${a.src}</td></tr>`).join('')}</table></div>
+ <p class="note">Kripto diambil dari CoinGecko dan kurs USD/IDR dari Frankfurter (kurs harian ECB). Saham, emas, dan reksa dana masih dummy karena belum ada API gratis yang bisa dipanggil langsung dari browser.</p>`;
+ document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{WF=b.dataset.f;watch()});
+}
+function alerts(){
+ const st=a=>{const p=W.find(x=>x.s===a.s).p;return a.d==='>='?p>=a.t:p<=a.t};
+ $('#view').innerHTML=`<h1 class="pg">Alert harga</h1>
+ <div class="alr"><label>Aset<select id="as">${W.map(a=>`<option>${a.s}</option>`).join('')}</select></label>
+ <label>Kondisi<select id="ad"><option value=">=">Naik hingga</option><option value="<=">Turun hingga</option></select></label>
+ <label>Harga target (Rp)<input id="at" type="number" step="any"></label><button class="pri" id="aa">Buat alert</button></div>
+ <div class="sc"><table><tr><th>Aset</th><th>Kondisi</th><th>Target</th><th>Harga kini</th><th>Status</th><th></th></tr>
+ ${A.length?A.map((a,i)=>`<tr><td>${a.s}</td><td>${a.d==='>='?'Naik hingga':'Turun hingga'}</td><td>${idr(a.t)}</td><td>${idr(W.find(x=>x.s===a.s).p)}</td><td><span class="chip ${st(a)?'t':''}">${st(a)?'Terpicu':'Menunggu'}</span></td><td><button data-i="${i}">Hapus</button></td></tr>`).join(''):'<tr><td colspan="6" class="l">Belum ada alert. Pilih aset, kondisi, dan harga target di atas.</td></tr>'}</table></div>
+ <p class="note">Di template ini alert hanya ditandai di layar. Di aplikasi final, alert yang terpicu dikirim ke email Anda oleh backend.</p>`;
+ $('#aa').onclick=()=>{const t=parseFloat($('#at').value);if(!t)return;A.push({s:$('#as').value,d:$('#ad').value,t});alerts()};
+ document.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{A.splice(+b.dataset.i,1);alerts()});
+}
+const fld=(id,l,v)=>`<label>${l}<input id="${id}" type="number" step="any" value="${v}"></label>`;
+function feas(){
+ const a=F.mode==='A';
+ $('#view').innerHTML=`<h1 class="pg">Kelayakan investasi</h1>
+ <div class="seg"><button data-m="A" class="${a?'on':''}">Valuasi saham (DCF)</button><button data-m="B" class="${a?'':'on'}">Proyek atau bisnis</button></div>
+ <div class="grid3"><fieldset><legend>Biaya modal (WACC)</legend>${fld('rf','Suku bunga bebas risiko (%)',7)}${fld('beta','Beta',1.1)}${fld('erp','Premi risiko ekuitas (%)',6)}${fld('kd','Biaya utang sebelum pajak (%)',9)}${fld('tx','Tarif pajak (%)',22)}${fld('we','Bobot ekuitas (%)',70)}</fieldset>
+ <fieldset><legend>${a?'Asumsi emiten':'Asumsi proyek'}</legend>${a?fld('fcf','Arus kas bebas tahun terakhir (Rp miliar)',5000)+fld('g','Pertumbuhan 5 tahun (%)',8)+fld('gt','Pertumbuhan terminal (%)',4)+fld('nd','Utang bersih (Rp miliar)',3000)+fld('sh','Jumlah saham (miliar lembar)',12.3)+fld('px','Harga pasar (Rp)',9875)
+ :fld('inv','Investasi awal (Rp juta)',1500)+`<label>Arus kas per tahun (Rp juta, pisahkan koma)<input id="cf" value="400, 450, 500, 550, 600"></label>`+`<label>Tingkat diskonto (%), kosongkan untuk memakai WACC<input id="ds" type="number" step="any"></label>`}</fieldset>
+ <div id="res"></div></div><div id="sens"></div>`;
+ document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{F.mode=b.dataset.m;feas()});
+ document.querySelectorAll('#view input').forEach(i=>i.oninput=calc);calc();
+}
+const npv=(r,f)=>f.reduce((s,c,i)=>s+c/Math.pow(1+r,i),0);
+const irr=f=>{let lo=-.99,hi=10,a=npv(lo,f);if(a*npv(hi,f)>0)return null;for(let i=0;i<200;i++){const m=(lo+hi)/2,v=npv(m,f);if(a*v<=0)hi=m;else{lo=m;a=v}}return(lo+hi)/2};
+const P=x=>(x*100).toFixed(2).replace('.',',')+'%';
+function calc(){
+ const v=id=>parseFloat($('#'+id).value),ke=v('rf')+v('beta')*v('erp'),we=v('we')/100,w=(we*ke+(1-we)*v('kd')*(1-v('tx')/100))/100;
+ const head=`<div><div>Biaya ekuitas (CAPM)</div></div>`;let rs,sn;
+ if(F.mode==='A'){
+  const gt=v('gt')/100,px=v('px'),
+  fv=(r,g)=>{if(r<=g)return NaN;let pv=0,c=v('fcf');for(let i=1;i<=5;i++){c*=1+v('g')/100;pv+=c/Math.pow(1+r,i)}return(pv+c*(1+g)/(r-g)/Math.pow(1+r,5)-v('nd'))/v('sh')},
+  fair=fv(w,gt);
+  let imp=null,lo=gt+.0005,hi=.6;if(fv(lo,gt)>=px&&fv(hi,gt)<=px){for(let i=0;i<100;i++){const m=(lo+hi)/2;fv(m,gt)>px?lo=m:hi=m}imp=(lo+hi)/2}
+  const mos=fair/px-1;
+  rs=`<h2>Hasil</h2><dl><div><dt>Biaya ekuitas</dt><dd>${P(ke/100)}</dd></div><div><dt>WACC</dt><dd>${P(w)}</dd></div><div><dt>Nilai wajar per saham</dt><dd>${isNaN(fair)?'—':idr(fair)}</dd></div><div><dt>NPV per saham (nilai wajar − harga)</dt><dd class="${cls(fair-px)}">${isNaN(fair)?'—':idr(fair-px)}</dd></div><div><dt>IRR implisit (return jika beli di harga pasar)</dt><dd>${imp==null?'—':P(imp)}</dd></div></dl>
+  <p class="note">${isNaN(fair)?'WACC harus lebih besar dari pertumbuhan terminal.':`Pada asumsi ini nilai wajar ${mos>=0?'di atas':'di bawah'} harga pasar sebesar ${Math.abs(mos*100).toFixed(1).replace('.',',')}%. Hasil sangat bergantung pada asumsi dan bukan saran investasi.`}</p>`;
+  const d=[-.02,-.01,0,.01,.02];
+  sn=`<h2>Sensitivitas nilai wajar per saham</h2><div class="sc"><table><tr><th>WACC \\ pertumbuhan terminal</th>${d.map(x=>`<th>${P(gt+x)}</th>`).join('')}</tr>${d.map(y=>`<tr><td>${P(w+y)}</td>${d.map(x=>{const z=fv(w+y,gt+x);return `<td class="${isNaN(z)?'':z>=px?'hu':'hd'}">${isNaN(z)?'—':idr(z)}</td>`}).join('')}</tr>`).join('')}</table></div>`;
+ }else{
+  const inv=v('inv'),cf=$('#cf').value.split(',').map(parseFloat).filter(x=>!isNaN(x)),fl=[-inv,...cf],ds=$('#ds').value===''?w:parseFloat($('#ds').value)/100;
+  const N=npv(ds,fl),R=irr(fl),pi=(N+inv)/inv;let cum=-inv,pb=null;
+  for(let i=1;i<fl.length;i++){if(cum+fl[i]>=0){pb=i-1+(-cum)/fl[i];break}cum+=fl[i]}
+  let c=0;const dc=fl.map((x,i)=>c+=x/Math.pow(1+ds,i));
+  rs=`<h2>Hasil</h2><dl><div><dt>WACC dari input</dt><dd>${P(w)}</dd></div><div><dt>Tingkat diskonto dipakai</dt><dd>${P(ds)}</dd></div><div><dt>NPV</dt><dd class="${cls(N)}">${money(N)}</dd></div><div><dt>IRR</dt><dd>${R==null?'—':P(R)}</dd></div><div><dt>Payback sederhana</dt><dd>${pb==null?'Belum kembali':pb.toFixed(1).replace('.',',')+' tahun'}</dd></div><div><dt>Profitability index</dt><dd>${pi.toFixed(2).replace('.',',')}</dd></div></dl>
+  <p class="note">${R==null?'IRR tidak ditemukan: arus kas tidak berganti tanda.':N>0&&R>ds?'Layak menurut NPV dan IRR pada asumsi ini.':'Belum layak menurut NPV atau IRR pada asumsi ini.'} Hasil bergantung pada asumsi dan bukan saran investasi.</p>${bars(dc)}<p class="note">Arus kas kumulatif terdiskonto per tahun (tahun 0 sampai ${fl.length-1}).</p>`;
+  const d=[-.02,-.01,0,.01,.02],m=[.8,.9,1,1.1,1.2];
+  sn=`<h2>Sensitivitas NPV</h2><div class="sc"><table><tr><th>Diskonto \\ arus kas</th>${m.map(x=>`<th>${Math.round(x*100)}%</th>`).join('')}</tr>${d.map(y=>`<tr><td>${P(ds+y)}</td>${m.map(x=>{const z=npv(ds+y,[fl[0],...fl.slice(1).map(q=>q*x)]);return `<td class="${z>=0?'hu':'hd'}">${money(z)}</td>`}).join('')}</tr>`).join('')}</table></div>`;
+ }
+ $('#res').innerHTML=rs;$('#sens').innerHTML=sn;
+}
+function senti(){
+ const by={};S.forEach(x=>(by[x.s]=by[x.s]||[]).push(x.v));
+ $('#view').innerHTML=`<h1 class="pg">Sentimen berita</h1><div class="two"><div><h2>Skor rata-rata per aset</h2><div class="pb">${Object.entries(by).map(([k,a])=>{const m=a.reduce((x,y)=>x+y,0)/a.length;return `<div><span>${k}</span>${dvr(m,1)}<span class="${cls(m)}" style="text-align:right">${m.toFixed(2).replace('.',',')}</span></div>`}).join('')}</div></div>
+ <div><h2>Berita terbaru</h2><ul class="nl">${S.map(x=>`<li><span>${x.s}</span><span>${x.t}</span><span class="${cls(x.v)}" style="text-align:right">${x.v.toFixed(2).replace('.',',')}</span></li>`).join('')}</ul></div></div>
+ <p class="note">Seluruh berita dan skor di halaman ini fiktif (dummy), skala −1 sampai +1. Di aplikasi final, berita diambil dari RSS media dan diberi skor oleh model sentimen.</p>`;
+}
+
+/* ---------- Asisten AI ---------- */
+/* Untuk memakai model AI sungguhan: isi endpoint dengan alamat backend Anda (mis. '/api/chat').
+   API key HARUS disimpan di backend, jangan pernah di file ini. Backend menerima {messages, context} dan mengembalikan {reply}. */
+const AI={endpoint:'',async ask(m,c){if(!AI.endpoint)return mock(m.at(-1).content,c);const r=await fetch(AI.endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:m,context:c})});if(!r.ok)throw 0;return(await r.json()).reply}};
+const CH=[{r:'ai',t:'Halo, saya asisten DOIntelligence. Saya ikut melihat halaman yang sedang Anda buka, jadi Anda bisa bertanya seperti "jelaskan hasil di layar". Saat ini jawaban masih simulasi dari data dummy.'}];
+const CX={port:1,watch:1,alert:1};let busy=false;
+const esc=t=>t.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+const pf=()=>{const rows=H.map(h=>{const a=W.find(x=>x.s===h.s),v=h.q*a.p,c=h.q*h.avg;return{s:h.s,c:a.c,v,pl:v-c,pp:(v-c)/c*100}}),tot=rows.reduce((a,r)=>a+r.v,0),cost=rows.reduce((a,r)=>a+r.v-r.pl,0);return{rows,tot,pl:tot-cost,pp:(tot-cost)/cost*100}};
+const ctx=()=>({page:pageCtx(),portfolio:CX.port?pf().rows:undefined,watchlist:CX.watch?W.map(a=>({s:a.s,p:a.p,ch:a.ch,src:a.src})):undefined,alerts:CX.alert?A:undefined});
+function mock(q,c){q=q.toLowerCase();
+ if(/sumber data/.test(q))return 'Kripto dari CoinGecko dan kurs USD/IDR dari Frankfurter (live). Saham, emas, dan reksa dana masih dummy. Sumber gratis bisa tertunda sekitar 15 menit.';
+ if(/cara kerja alert/.test(q))return 'Anda menentukan aset, arah (naik hingga atau turun hingga), dan harga target. Saat harga mencapai target, alert berstatus Terpicu. Di aplikasi final, backend mengecek harga berkala dan mengirim email.';
+ if(/di layar|halaman ini|yang saya lihat/.test(q)){const g=c.page;if(g.page==='Kelayakan')return 'Hasil yang tampil saat ini: '+(g.hasil||'belum ada')+'.\nNPV positif dan IRR di atas WACC menandakan layak pada asumsi ini. Coba ubah asumsi lalu tanyakan lagi.';if(g.page==='Ringkasan')return `Anda sedang melihat ringkasan portofolio dengan rentang ${g.range}`+(g.disembunyikan.length?`, kelas aset disembunyikan: ${g.disembunyikan.join(', ')}.`:'.');if(g.page==='Watchlist')return `Anda sedang melihat watchlist (filter: ${g.filter}).`;return `Anda sedang berada di halaman ${g.page}.`}
+ if(/naik paling|tertinggi|paling tinggi/.test(q)){if(!c.watchlist)return 'Data watchlist tidak dibagikan ke saya. Aktifkan di panel "Data yang dibagikan".';const r=[...W].sort((a,b)=>b.ch-a.ch);return `Kenaikan 24 jam tertinggi: **${r[0].s}** (${pct(r[0].ch)}), lalu **${r[1].s}** (${pct(r[1].ch)}).`}
+ const off=k=>`Data ${k} tidak dibagikan ke saya. Aktifkan di panel "Data yang dibagikan" agar saya bisa menjawab.`,sym=W.find(a=>q.includes(a.s.toLowerCase()));
+ if(/alert/.test(q)){if(!c.alerts)return off('alert');const t=A.filter(a=>{const p=W.find(x=>x.s===a.s).p;return a.d==='>='?p>=a.t:p<=a.t});return `Ada **${A.length}** alert aktif dan **${t.length}** terpicu.`+(t.length?'\nTerpicu: '+t.map(a=>a.s).join(', ')+'.':'\nBelum ada yang mencapai target.')}
+ if(/npv|irr|wacc|layak|dcf/.test(q))return '**NPV** adalah selisih nilai kini arus kas masa depan dengan investasi awal. NPV positif berarti proyek menambah nilai.\n**IRR** adalah tingkat imbal hasil yang membuat NPV sama dengan nol. Proyek layak jika IRR di atas biaya modal.\n**WACC** adalah rata-rata biaya modal dari ekuitas dan utang, dan dipakai sebagai tingkat diskonto.\nCoba ubah asumsi di halaman Kelayakan dan lihat tabel sensitivitasnya. Hasilnya bergantung pada asumsi dan bukan saran investasi.';
+ if(/sentimen|berita/.test(q)){const by={};S.forEach(x=>(by[x.s]=by[x.s]||[]).push(x.v));return 'Skor sentimen rata-rata (data dummy, skala −1 sampai +1):\n'+Object.entries(by).map(([k,a])=>`• **${k}**: ${(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2).replace('.',',')}`).join('\n')}
+ if(!c.portfolio&&/portofolio|alokasi|terbaik|terlemah|untung|rugi|ringkas|total/.test(q))return off('portofolio');
+ const P=pf();
+ if(/alokasi|komposisi/.test(q)){const by={};P.rows.forEach(r=>by[r.c]=(by[r.c]||0)+r.v);return 'Alokasi aset Anda:\n'+Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`• **${k}**: ${(v/P.tot*100).toFixed(1).replace('.',',')}%`).join('\n')}
+ if(/terbaik|terlemah|untung|rugi|kinerja/.test(q)){const r=[...P.rows].sort((a,b)=>b.pp-a.pp);return `Terbaik: **${r[0].s}** (${pct(r[0].pp)}). Terlemah: **${r.at(-1).s}** (${pct(r.at(-1).pp)}).\nPosisi rugi: ${r.filter(x=>x.pl<0).map(x=>x.s).join(', ')||'tidak ada'}.`}
+ if(sym){if(!c.watchlist)return off('watchlist');return `**${sym.s}** (${sym.n}) ${idr(sym.p)}, ${pct(sym.ch)} dalam 24 jam. Sumber data: ${sym.src}.`}
+ if(/portofolio|ringkas|nilai|total/.test(q))return `Nilai portofolio **${idr(P.tot)}** dengan hasil **${pct(P.pp)}** (${idr(P.pl)}) dari modal. Terdiri dari ${P.rows.length} aset di ${new Set(P.rows.map(r=>r.c)).size} kelas aset.`;
+ return 'Saya belum paham pertanyaan itu. Coba tanyakan tentang ringkasan portofolio, alokasi aset, kinerja aset, alert, sentimen, harga suatu aset, atau arti NPV, IRR, dan WACC.'}
+function drawLog(){const l=$('#log');if(!l)return;l.innerHTML=CH.map(m=>`<div class="m ${m.r}">${fmt(m.t)}</div>`).join('')+(busy?'<div class="m ai"><span class="dt" aria-label="Asisten sedang mengetik"><i></i><i></i><i></i></span></div>':'');l.scrollTop=l.scrollHeight}
+async function send(t){t=(t||'').trim();if(!t||busy)return;CH.push({r:'me',t});busy=true;drawLog();
+ try{await new Promise(r=>setTimeout(r,500+Math.random()*500));const rp=await AI.ask(CH.map(m=>({role:m.r==='me'?'user':'assistant',content:m.t})),ctx());CH.push({r:'ai',t:rp})}
+ catch(e){CH.push({r:'ai',t:'Asisten tidak dapat dihubungi. Periksa koneksi ke backend, lalu kirim ulang pesan Anda.'})}
+ busy=false;drawLog()}
+const PN={'':'Ringkasan',watchlist:'Watchlist',alert:'Alert',kelayakan:'Kelayakan',sentimen:'Sentimen'};
+const PQ={'':['Ringkas portofolio saya','Aset mana yang paling untung dan paling rugi?','Bagaimana alokasi aset saya?'],watchlist:['Aset mana yang naik paling tinggi hari ini?','Jelaskan sumber data halaman ini'],alert:['Apakah ada alert yang terpicu?','Jelaskan cara kerja alert'],kelayakan:['Jelaskan hasil di layar','Jelaskan arti NPV, IRR, dan WACC'],sentimen:['Bagaimana sentimen berita saat ini?']};
+const pg=()=>PN[location.hash.slice(1)]!==undefined?location.hash.slice(1):'';
+let CM='open';try{CM=localStorage.getItem('aim')||'open'}catch(e){}
+function pageCtx(){const p=pg(),o={page:PN[p]};if(p==='')Object.assign(o,{range:RG+' hari',disembunyikan:[...HID]});if(p==='watchlist')o.filter=WF;if(p==='kelayakan'&&$('#res'))o.hasil=$('#res').innerText.replace(/\n+/g,'; ');return o}
+function setCM(m){CM=m;try{localStorage.setItem('aim',m)}catch(e){}$('#ai').className=m==='wide'?'wide':m==='off'?'off':'';$('#ln').hidden=m!=='off';$('#wd').textContent=m==='wide'?'Perkecil':'Perlebar';dispatchEvent(new Event('resize'))}
+function ctxUI(){const p=pg();$('#pc').textContent='Sedang melihat: '+PN[p];$('#sq').innerHTML=PQ[p].map(c=>`<button data-q="${c}">${c}</button>`).join('');document.querySelectorAll('#sq [data-q]').forEach(b=>b.onclick=()=>send(b.dataset.q))}
+function mountChat(){
+ if(matchMedia('(max-width:1100px)').matches)CM='off';
+ $('#ai').innerHTML=`<div class="ah"><div><b>Asisten DOIntelligence</b><small id="pc"></small></div><div><button class="ib" id="wd"></button><button class="ib" id="cl">Tutup</button></div></div>
+ <details class="ctxd"><summary>Data yang dibagikan</summary>${[['port','Portofolio'],['watch','Watchlist'],['alert','Alert']].map(([k,l])=>`<label class="ck"><input type="checkbox" data-c="${k}" ${CX[k]?'checked':''}>${l}</label>`).join('')}<p class="note">Halaman yang sedang dibuka selalu ikut sebagai konteks. ${AI.endpoint?'Terhubung ke backend.':'Mode simulasi: belum terhubung ke model AI, tidak ada data yang keluar dari browser.'} Jawaban bukan saran investasi.</p></details>
+ <div id="log" class="log" aria-live="polite"></div><div class="sq" id="sq"></div>
+ <div class="cin"><textarea id="q" rows="1" placeholder="Tanyakan tentang halaman ini atau pasar" aria-label="Pesan"></textarea><button class="pri" id="sd">Kirim</button></div>`;
+ const q=$('#q'),go=()=>{const t=q.value;q.value='';q.style.height='';send(t)};
+ $('#sd').onclick=go;q.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();go()}};q.oninput=()=>{q.style.height='auto';q.style.height=Math.min(q.scrollHeight,140)+'px'};
+ document.querySelectorAll('[data-c]').forEach(i=>i.onchange=()=>{CX[i.dataset.c]=i.checked?1:0});
+ $('#wd').onclick=()=>setCM(CM==='wide'?'open':'wide');$('#cl').onclick=()=>setCM('off');$('#ln').onclick=()=>setCM('open');
+ setCM(CM);drawLog();
+}
+
+/* ---------- Router dan data live ---------- */
+const R={'':dash,watchlist:watch,alert:alerts,kelayakan:feas,sentimen:senti};
+const NAV=[['','Ringkasan'],['watchlist','Watchlist'],['alert','Alert'],['kelayakan','Kelayakan'],['sentimen','Sentimen']];
+function route(){const h=location.hash.slice(1);(R[h]||dash)();ctxUI();
+ $('#nav').innerHTML=`<div class="brand"><b>DOIntelligence</b><p class="ds2">Your AI-powered personal financial companion.</p></div>`+NAV.map(([k,l])=>`<a href="#${k}" class="${k===h?'on':''}">${l}</a>`).join('')+`<small>Copyright (c) 2026 sxpistols. All rights reserved.</small>`}
+function stat(){const n=W.filter(x=>x.live).length;$('#stat').textContent=`${n} dari ${W.length} aset memakai harga live, sisanya dummy · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}`}
+async function load(){$('#stat').textContent='Memuat data…';
+ try{const d=await get(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=idr&ids=${W.filter(x=>x.id).map(x=>x.id).join(',')}&sparkline=true&price_change_percentage=24h`);
+  d.forEach(c=>{const a=W.find(x=>x.id===c.id);if(!a)return;a.p=c.current_price;a.ch=c.price_change_percentage_24h||0;a.spark=c.sparkline_in_7d.price.filter((_,i)=>i%6===0);a.src='CoinGecko (live)';a.live=1})}catch(e){}
+ try{const d=await get('https://api.frankfurter.dev/v1/latest?base=USD&symbols=IDR'),a=W.find(x=>x.s==='USD/IDR');a.p=d.rates.IDR;mk(a,7);a.src='Frankfurter, kurs harian (grafik dummy)';a.live=1}catch(e){}
+ stat();route()}
+const eff=()=>{const t=document.documentElement.dataset.theme;return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)};
+const thl=()=>$('#th').textContent=eff()?'Mode terang':'Mode gelap';
+try{const t=localStorage.getItem('th');if(t)document.documentElement.dataset.theme=t}catch(e){}
+$('#th').onclick=()=>{const t=eff()?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('th',t)}catch(e){}thl()};thl();
+mountChat();addEventListener('hashchange',route);$('#reload').onclick=load;route();stat();load();
+</script>
+</body>
+</html>
