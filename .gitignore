@@ -1,0 +1,4 @@
+.DS_Store
+
+# Keluaran pipeline data (dipublikasikan ke cabang `data`, bukan ke main)
+/data/

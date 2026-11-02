@@ -1,0 +1,63 @@
+name: Perbarui data pasar dan berita
+
+on:
+  schedule:
+    # setiap 30 menit; harga IDX bergerak 09.00-16.00 WIB, kripto/forex/berita 24 jam
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Siapkan Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # cadangan bila suatu sumber sedang menolak permintaan (mis. Yahoo 429):
+      # nilai terakhir tetap dipakai bersama waktu ambil aslinya
+      - name: Ambil data publikasi sebelumnya
+        run: |
+          mkdir -p data
+          for f in market history news; do
+            curl -fsSL --max-time 20 "https://raw.githubusercontent.com/${{ github.repository }}/data/$f.json" -o "data/$f.json" || true
+          done
+
+      - name: Ambil data
+        run: node scripts/fetch-data.mjs
+
+      - name: Publikasikan ke cabang data
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/publish
+          cp data/*.json /tmp/publish/
+          git config user.name "dointelligence-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch origin data --depth=1
+            git checkout -B data FETCH_HEAD
+          else
+            git checkout --orphan data
+          fi
+          git rm -rf . --quiet || true
+          cp /tmp/publish/*.json .
+          git add *.json
+          if git diff --staged --quiet; then
+            echo "Tidak ada perubahan."
+          else
+            git commit -m "data: perbarui harga dan berita ($(date -u +%Y-%m-%dT%H:%MZ))"
+            git push origin data
+          fi
