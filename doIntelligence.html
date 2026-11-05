@@ -142,6 +142,20 @@ td input.nav{width:100%}
 .chart{width:100%;display:block;height:auto}
 .ctip{color:var(--mut);font-size:.85rem;min-height:1.4em;padding:4px 0 8px}
 .ctip b{color:var(--fg)}
+/* __CSS_MODUL_SAHAM_v1__ */
+.spk-ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.spk-det td{white-space:normal;text-align:left;font-size:.88rem;line-height:1.6}
+.spk-verd{font-weight:600;white-space:nowrap}
+.spk-mut{color:var(--mut);font-size:.82rem}
+/* __CSS_MODUL_PROYEK_v1__ */
+.pr-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;padding:12px 0;border-bottom:1px solid var(--line)}
+.pr-row:first-child{padding-top:0}
+.pr-row label{display:grid;gap:4px;color:var(--mut);font-size:.84rem}
+.pr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin-bottom:24px}
+.pr-card{margin-bottom:0}
+.pr-terbaik{border-color:var(--up);box-shadow:0 0 0 1px var(--up)}
+.pr-best{background:color-mix(in srgb,var(--up) 10%,transparent)}
+@media(max-width:640px){.pr-row{grid-template-columns:1fr 1fr}.pr-row label:first-child{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -245,6 +259,7 @@ function applyMarket(m){
   if(!a){a={s:x.symbol,n:x.name||x.symbol,c:x.cls||'Lainnya',p:x.price,ch:0,spark:[]};W.push(a)}
   a.p=x.price;a.ch=x.changePct==null?null:x.changePct;a.spark=Array.isArray(x.spark)?x.spark:[];
   a.src=x.source||'Yahoo Finance';a.srcUrl=x.sourceUrl;a.upd=x.asOf;a.live=1;a.manual=0;
+  if(x.fund)a.fund=x.fund; // fundamental pipeline (PER, PBV, ROE, ...) diteruskan ke modul saham
   if(x.name)a.n=x.name;
  });
  return true;
@@ -536,6 +551,189 @@ function calc(){
  }
  $('#res').innerHTML=rs;$('#sens').innerHTML=sn;
 }
+// __MODUL_SAHAM_PICKING_v1_START__
+/* ---------- Modul Saham: picking gabungan fundamental + teknikal + sentimen ----------
+   Universe fase 1: 10 saham IDX dari pipeline (SP_IDX). Kripto (SP_CRYPTO) tidak
+   punya laporan keuangan emiten, jadi hanya dinilai teknikal + sentimen di tabel
+   terpisah dan tidak dihitung nilai wajar DCF-nya.
+   Sumber fundamental per saham, berurutan: (1) a.fund live dari pipeline
+   (Yahoo Finance quoteSummary, disalurkan applyMarket dari market.json);
+   (2) input manual pengguna (localStorage `di.fund`); (3) angka CONTOH generik
+   yang SAMA untuk semua saham, selalu berlabel "Dummy — contoh" — tidak pernah
+   disajikan sebagai data nyata. Tidak ada API fundamental gratis yang
+   terverifikasi selain quoteSummary Yahoo; bila pipeline belum berhasil
+   mengambilnya, isi angka manual dari laporan keuangan emiten.
+   Catatan DER: Yahoo mengembalikan debtToEquity dalam satuan persen
+   (terverifikasi 2026-11-06: TLKM 56,278 = 0,56x; bank null karena definisi
+   utang bank berbeda). Untuk data live, DER > 10 dibagi 100 sebelum dipakai;
+   input manual diasumsikan sudah rasio (x). Untuk bank, Yahoo tidak memberi
+   DER/FCF yang bermakna -> kedua faktor dilewati (skor dirata-rata dari faktor
+   yang tersedia) dan DCF tidak dihitung.
+   Nilai wajar DCF memakai rumus yang sama dengan Mode A di #kelayakan
+   (FCF 5 tahun + terminal value, didiskonto WACC); tabel sensitivitas lengkap
+   ada di sana. Semua konstanta/state modul ini hanya ada di dalam blok ini. */
+const SP_SET_KEY='di.saham';
+const SP_FUND_KEY='di.fund';
+const SP_IDX=['BBCA','BBRI','TLKM','BMRI','ASII','ANTM','ICBP','ADRO','UNTR','GOTO'];
+const SP_CRYPTO=['BTC','ETH','SOL'];
+const SP_DUMMY={per:12,pbv:1.8,roe:15,der:0.8,divYield:4,growth:6,fcf:5000,sharesOut:10,netDebt:2000};
+function spSetDef(){return{wf:50,wt:35,ws:15,perMax:15,pbvMax:2,roeMin:12,derMax:1,divMin:3,groMin:5,wacc:11,g5:8,gt:4}}
+function spNum(x,d){const v=parseFloat(x);return isFinite(v)?v:d}
+function spSanSet(d){const o=spSetDef();if(!d||typeof d!=='object')return o;
+ for(const k in o)o[k]=spNum(d[k],o[k]);
+ o.wf=Math.max(0,o.wf);o.wt=Math.max(0,o.wt);o.ws=Math.max(0,o.ws);
+ return o}
+let SP_SET=spSanSet(store.read(SP_SET_KEY,null));
+let SP_MAN=store.read(SP_FUND_KEY,null);
+if(!SP_MAN||typeof SP_MAN!=='object'||Array.isArray(SP_MAN))SP_MAN={};
+const spSaveSet=()=>store.write(SP_SET_KEY,SP_SET);
+const spSaveMan=()=>store.write(SP_FUND_KEY,SP_MAN);
+const spCl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const spF=(v,d=1)=>v==null||!isFinite(v)?'—':(+v).toFixed(d).replace('.',',');
+const spAvg=a=>{const v=a.filter(x=>x!=null&&isFinite(x));return v.length?v.reduce((x,y)=>x+y,0)/v.length:null};
+function spFundFor(a){
+ if(a.fund&&(a.fund.per!=null||a.fund.pbv!=null||a.fund.roe!=null||a.fund.divYield!=null||a.fund.growth!=null)){
+  const d={...a.fund};
+  if(d.der!=null&&d.der>10)d.der=d.der/100; // Yahoo: debtToEquity dalam persen
+  return{d,src:'live'};
+ }
+ const m=SP_MAN[a.s];
+ if(m&&(m.per!=null||m.pbv!=null||m.roe!=null||m.divYield!=null||m.growth!=null))return{d:{...m},src:'manual'};
+ return{d:{...SP_DUMMY},src:'dummy'};
+}
+function spFundChip(src,f){
+ if(src==='live')return `<span class="chip t">Live</span><div class="spk-mut">${f.source||'Yahoo Finance quoteSummary'}${f.asOf?' · '+tgl(f.asOf):''}${f.carried?' · arsip':''}</div>`;
+ if(src==='manual')return `<span class="chip man">Input manual</span>${f.at?`<div class="spk-mut">diisi ${tgl(f.at)}</div>`:''}`;
+ return `<span class="chip d">Dummy — contoh</span><div class="spk-mut">ganti dengan angka laporan keuangan emiten</div>`;
+}
+function spFundScore(d,S){
+ const p={};
+ if(d.per!=null&&d.per>0)p.per=spCl(120-(d.per/S.perMax)*60,0,100);
+ if(d.pbv!=null&&d.pbv>0)p.pbv=spCl(120-(d.pbv/S.pbvMax)*60,0,100);
+ if(d.roe!=null)p.roe=spCl(d.roe/S.roeMin*60,0,100);
+ if(d.der!=null&&d.der>=0)p.der=spCl(100-(d.der/S.derMax)*50,0,100);
+ if(d.divYield!=null)p.div=spCl(d.divYield/S.divMin*60,0,100);
+ if(d.growth!=null)p.gro=spCl(50+(d.growth-S.groMin)*5,0,100);
+ const v=Object.values(p);
+ return{score:v.length?v.reduce((a,b)=>a+b,0)/v.length:null,parts:p};
+}
+function spTech(sym){
+ const ser=HIST[sym],bars=ser&&ser.bars?ser.bars:null;
+ if(!bars||bars.length<30)return{score:null,parts:{},det:{},why:'Histori harga belum tersedia'};
+ const closes=bars.map(b=>b[4]),ma20=sma(closes,20),ma50=sma(closes,50),R=rsi(closes),M=macd(closes);
+ const last=closes.at(-1),parts={},det={};
+ const m20=ma20.at(-1),m50=ma50.at(-1);
+ det.ma20=m20;det.ma50=m50;
+ if(m20!=null&&m50!=null)parts.trend=(last>m20?50:0)+(last>m50?50:0);
+ else if(m20!=null)parts.trend=last>m20?75:25;
+ const r=R.at(-1);det.rsi=r;
+ if(r!=null)parts.rsi=r>=45&&r<=65?90:(r>=35&&r<45)||(r>65&&r<=70)?65:r>=30&&r<35?55:r<30?50:30;
+ const mh=M.hist.at(-1),ml=M.line.at(-1),ms=M.signal.at(-1);
+ det.macdHist=mh;
+ if(mh!=null&&ml!=null&&ms!=null)parts.macd=mh>0?(ml>ms?90:70):(ml>ms?50:25);
+ const sr=srLevels(bars);det.res=sr.res;det.sup=sr.sup;
+ const pos=(last-sr.sup)/((sr.res-sr.sup)||1);det.pos=pos;
+ if(sr.res>sr.sup)parts.sr=pos<0?40:pos<0.25?90:pos<0.5?70:pos<0.75?50:pos<=1?30:65;
+ const v=Object.values(parts);
+ return{score:v.length?v.reduce((a,b)=>a+b,0)/v.length:null,parts,det};
+}
+function spDcf(a,d,S){
+ if(d.fcf==null||!(d.fcf>0))return{fair:null,why:'FCF tidak tersedia (untuk bank, Yahoo tidak menyediakan FCF)'};
+ if(d.sharesOut==null||!(d.sharesOut>0))return{fair:null,why:'Jumlah saham tidak tersedia'};
+ const w=S.wacc/100,g=S.g5/100,gt=S.gt/100;
+ if(!(w>0))return{fair:null,why:'WACC harus lebih dari 0'};
+ if(w<=gt)return{fair:null,why:'WACC harus lebih besar dari pertumbuhan terminal'};
+ let pv=0,c=d.fcf; // Rp miliar
+ for(let i=1;i<=5;i++){c*=1+g;pv+=c/Math.pow(1+w,i)}
+ const tv=c*(1+gt)/(w-gt)/Math.pow(1+w,5);
+ const fair=(pv+tv-(d.netDebt||0))/d.sharesOut; // (Rp miliar)/(miliar lembar) = Rp/lembar
+ return{fair,mos:fair/a.p-1};
+}
+function spCombine(fs,ts,ss,S){
+ const comps=[[fs,S.wf],[ts,S.wt],[ss,S.ws]].filter(([s])=>s!=null);
+ if(!comps.length)return null;
+ const w=comps.reduce((a,[,x])=>a+x,0)||1;
+ return comps.reduce((a,[s,x])=>a+s*x,0)/w;
+}
+const spVerdict=s=>s==null?{t:'—',c:''}:s>=70?{t:'Layak diteliti',c:'t'}:s>=50?{t:'Netral',c:''}:{t:'Hindari',c:'d'};
+const spScore=v=>v==null?'—':Math.round(v);
+function stockPick(){
+ const S=SP_SET;
+ const sentMap={};sentiBy().forEach(x=>sentMap[x.s]={v:x.v,n:x.n});
+ const rows=SP_IDX.map(sym=>{
+  const a=W.find(x=>x.s===sym);
+  if(!a)return null;
+  const {d,src}=spFundFor(a);
+  const fs=spFundScore(d,S),ts=spTech(sym);
+  const sn=sentMap[sym],ss=sn?spCl((sn.v+1)/2*100,0,100):null;
+  const comb=spCombine(fs.score,ts.score,ss,S);
+  const dcf=spDcf(a,d,S);
+  return{a,d,src,fs,ts,sn,ss,comb,dcf};
+ }).filter(Boolean);
+ rows.sort((x,y)=>(y.comb==null? -1:y.comb)-(x.comb==null?-1:x.comb));
+ const nDummy=rows.filter(r=>r.src==='dummy').length,nLive=rows.filter(r=>r.src==='live').length,nMan=rows.filter(r=>r.src==='manual').length;
+ const crypto=SP_CRYPTO.map(sym=>{
+  const a=W.find(x=>x.s===sym);
+  if(!a)return null;
+  const ts=spTech(sym),sn=sentMap[sym],ss=sn?spCl((sn.v+1)/2*100,0,100):null;
+  return{a,ts,sn,ss,comb:spCombine(null,ts.score,ss,S)};
+ }).filter(Boolean);
+ crypto.sort((x,y)=>(y.comb==null?-1:y.comb)-(x.comb==null?-1:x.comb));
+ const manSyms=Object.keys(SP_MAN).filter(k=>SP_MAN[k]&&(SP_MAN[k].per!=null||SP_MAN[k].pbv!=null||SP_MAN[k].roe!=null));
+ $('#view').innerHTML=`<h1 class="pg">Pilih Saham</h1>
+ ${FEED.at?'':`<div class="pn" style="border-color:var(--dn);margin-bottom:18px"><b>Data pasar pipeline belum tersedia — harga masih dummy.</b><p class="note" style="margin:6px 0 0">Skor teknikal di bawah memakai histori harga nyata bila sudah termuat; bila belum, kolom teknikal bertanda “—”. Jalankan pipeline <code>scripts/fetch-data.mjs</code> supaya harga dan histori menjadi live.</p></div>`}
+ ${nDummy?`<div class="pn" style="border-color:var(--c2);margin-bottom:18px"><b>Angka fundamental bertanda Dummy — contoh.</b><p class="note" style="margin:6px 0 0">${nDummy} dari ${rows.length} saham masih memakai angka contoh generik yang sama untuk semua saham (PER 12 · PBV 1,8 · ROE 15% · DER 0,8× · dividen 4% · growth 6%). Itu BUKAN data emiten dan peringkat yang memakai angka itu hanya ilustrasi format. Tidak ada API fundamental gratis yang terverifikasi selain Yahoo Finance quoteSummary yang dipakai pipeline; bila pipeline belum berhasil mengambilnya, isi angka manual dari laporan keuangan emiten pada formulir di bawah. Data live: ${nLive} saham · input manual: ${nMan} saham.</p></div>`:''}
+ <div class="pn" style="margin-bottom:24px"><h2>Bobot &amp; ambang skor — ubah sesuai preferensi Anda</h2>
+ <div class="spk-ctl"><fieldset><legend>Bobot skor (%)</legend>${fld('sp-wf','Fundamental',S.wf)}${fld('sp-wt','Teknikal',S.wt)}${fld('sp-ws','Sentimen',S.ws)}<p class="note">Default 50 / 35 / 15. Bila satu komponen tidak tersedia (mis. tidak ada berita), bobot sisanya dinormalisasi.</p></fieldset>
+ <fieldset><legend>Ambang fundamental</legend>${fld('sp-per','PER maksimal',S.perMax)}${fld('sp-pbv','PBV maksimal',S.pbvMax)}${fld('sp-roe','ROE minimal (%)',S.roeMin)}${fld('sp-der','DER maksimal (×)',S.derMax)}${fld('sp-div','Dividen minimal (%)',S.divMin)}${fld('sp-gro','Growth minimal (%)',S.groMin)}</fieldset>
+ <fieldset><legend>Asumsi nilai wajar (DCF)</legend>${fld('sp-wacc','WACC / diskonto (%)',S.wacc)}${fld('sp-g5','Pertumbuhan FCF 5 tahun (%)',S.g5)}${fld('sp-gt','Pertumbuhan terminal (%)',S.gt)}<p class="note">Rumus sama dengan Mode A di <a href="#kelayakan">Kelayakan</a>: FCF 5 tahun + terminal value, didiskonto WACC. Tabel sensitivitas lengkap ada di sana.</p></fieldset></div></div>
+ <div class="pn sc"><h2>Saham IDX — peringkat gabungan</h2><table><tr><th>Saham</th><th>Harga</th><th>Skor</th><th>Fund.</th><th>Tek.</th><th>Sent.</th><th>Nilai wajar (DCF)</th><th>Verdict</th></tr>
+ ${rows.map(r=>{const v=spVerdict(r.comb);return `<tr><td><a href="#grafik/${r.a.s}" class="lk">${r.a.s}</a><small>${r.a.n}</small>${spFundChip(r.src,r.d)}</td>
+ <td>${idr(r.a.p)}<small>${srcOf(r.a).l}${r.a.upd?' · '+tgl(r.a.upd):''}</small></td>
+ <td><b>${spScore(r.comb)}</b><small>/ 100</small></td><td>${spScore(r.fs.score)}</td><td>${spScore(r.ts.score)}${r.ts.score==null?`<small>${r.ts.why||''}</small>`:''}</td>
+ <td>${spScore(r.ss)}${r.sn?`<small>${r.sn.n} berita</small>`:''}</td>
+ <td>${r.dcf.fair==null?'—':idr(r.dcf.fair)}${r.dcf.fair!=null?`<small class="${cls(r.dcf.mos)}">${pct(r.dcf.mos*100)} dari harga</small>${r.src==='dummy'?'<small>Dummy — contoh</small>':''}`:`<small>${r.dcf.why}</small>`}</td>
+ <td class="spk-verd"><span class="chip ${v.c}">${v.t}</span></td></tr>`}).join('')}</table>
+ <p class="note">Skor 0–100 per komponen; skor gabungan = rata-rata berbobot komponen yang tersedia. Verdict: ≥ 70 Layak diteliti · 50–69 Netral · &lt; 50 Hindari. Klik kode saham untuk membuka grafik dan indikatornya.</p></div>
+ <div class="pn sc"><h2>Rincian faktor per saham</h2><table class="spk-det"><tr><th>Saham</th><th>PER</th><th>PBV</th><th>ROE</th><th>DER</th><th>Dividen</th><th>Growth</th><th>RSI</th><th>MACD hist</th><th>Posisi S/R</th><th>Sentimen</th></tr>
+ ${rows.map(r=>`<tr><td><b>${r.a.s}</b><small>${r.src==='live'?'Live':r.src==='manual'?'Input manual':'Dummy — contoh'}</small></td>
+ <td>${spF(r.d.per,2)}</td><td>${spF(r.d.pbv,2)}</td><td>${r.d.roe==null?'—':spF(r.d.roe,1)+'%'}</td><td>${r.d.der==null?'—':spF(r.d.der,2)+'×'}</td>
+ <td>${r.d.divYield==null?'—':spF(r.d.divYield,1)+'%'}</td><td>${r.d.growth==null?'—':spF(r.d.growth,1)+'%'}</td>
+ <td>${r.ts.det.rsi==null?'—':spF(r.ts.det.rsi,1)}</td><td>${r.ts.det.macdHist==null?'—':spF(r.ts.det.macdHist,0)}</td>
+ <td>${r.ts.det.pos==null?'—':spF(r.ts.det.pos*100,0)+'% ke R'}</td>
+ <td>${r.sn?spF(r.sn.v,2)+' ('+r.sn.n+' berita)':'—'}</td></tr>`).join('')}</table>
+ <p class="note">Fundamental memakai PER, PBV, ROE, DER, dividen, dan growth dari sumber di atas. DER dari Yahoo sudah dinormalisasi dari satuan persen (mis. 56,28 → 0,56×). Untuk bank, DER dan FCF tidak tersedia dari Yahoo sehingga tidak masuk skor dan DCF. Posisi S/R = jarak harga dari support menuju resistance (0% = di support, 100% = di resistance). Sentimen = rata-rata skor lexicon berita (−1 sampai +1).</p></div>
+ <div class="pn sc"><h2>Kripto — teknikal + sentimen saja</h2><table><tr><th>Aset</th><th>Harga</th><th>Teknikal</th><th>Sentimen</th><th>Skor</th><th>Verdict</th></tr>
+ ${crypto.map(r=>{const v=spVerdict(r.comb);return `<tr><td><a href="#grafik/${r.a.s}" class="lk">${r.a.s}</a><small>${r.a.n}</small></td>
+ <td>${idr(r.a.p)}<small>${srcOf(r.a).l}${r.a.upd?' · '+tgl(r.a.upd):''}</small></td>
+ <td>${spScore(r.ts.score)}${r.ts.score==null?`<small>${r.ts.why||''}</small>`:''}</td>
+ <td>${spScore(r.ss)}${r.sn?`<small>${r.sn.n} berita</small>`:''}</td><td><b>${spScore(r.comb)}</b><small>/ 100</small></td>
+ <td class="spk-verd"><span class="chip ${v.c}">${v.t}</span></td></tr>`}).join('')}</table>
+ <p class="note">Kripto tidak punya laporan keuangan emiten, jadi tidak dinilai fundamentalnya dan tidak dihitung nilai wajar DCF-nya. Skor di sini hanya teknikal + sentimen (bobot dinormalisasi).</p></div>
+ <div class="pn"><h2>Input manual fundamental (per saham)</h2>
+ <p class="note" style="margin-top:0">Dipakai hanya bila tidak ada data live dari pipeline untuk saham itu. Isi dari laporan keuangan emiten (laporan tahunan/kuartalan di situs BEI atau situs emiten). Kosongkan kolom yang tidak Anda ketahui — faktor itu dilewati dalam skor. Tersimpan di peramban ini (localStorage, kunci <code>di.fund</code>).</p>
+ <div class="spk-ctl"><label>Saham<select id="sp-man-sym">${SP_IDX.map(s=>`<option value="${s}">${s}</option>`).join('')}</select></label>
+ ${fld('sp-man-per','PER', '')}${fld('sp-man-pbv','PBV','')}${fld('sp-man-roe','ROE (%)','')}${fld('sp-man-der','DER (×)','')}${fld('sp-man-div','Dividen (%)','')}${fld('sp-man-gro','Growth laba (%)','')}${fld('sp-man-fcf','FCF (Rp miliar)','')}${fld('sp-man-sh','Jumlah saham (miliar lembar)','')}${fld('sp-man-nd','Utang bersih (Rp miliar)','')}</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="pri" id="sp-man-save">Simpan input manual</button><button id="sp-man-del">Hapus input saham ini</button></div>
+ <p class="note">Saham dengan input manual tersimpan: ${manSyms.length?manSyms.join(', '):'belum ada'}. Input manual tidak dipakai bila data live pipeline tersedia untuk saham yang sama.</p></div>
+ <p class="note">Metode: skor fundamental menilai PER, PBV, ROE, DER, dividen, dan growth terhadap ambang di atas; skor teknikal menilai tren vs MA20/MA50, RSI, MACD, dan posisi terhadap support/resistance dari harga penutupan harian nyata; sentimen memakai skor lexicon berita. Nilai wajar DCF memakai FCF dan growth dari data fundamental (live/manual) dan WACC di atas. Hasil sangat bergantung pada asumsi dan kualitas data — <b>bukan saran investasi</b>. Lakukan riset sendiri sebelum membeli saham apa pun.</p>`;
+ const bindSet=(id,key)=>{const el=$(id);if(el)el.onchange=()=>{SP_SET[key]=spNum(el.value,SP_SET[key]);SP_SET=spSanSet(SP_SET);spSaveSet();stockPick()}};
+ [['#sp-wf','wf'],['#sp-wt','wt'],['#sp-ws','ws'],['#sp-per','perMax'],['#sp-pbv','pbvMax'],['#sp-roe','roeMin'],['#sp-der','derMax'],['#sp-div','divMin'],['#sp-gro','groMin'],['#sp-wacc','wacc'],['#sp-g5','g5'],['#sp-gt','gt']].forEach(([id,k])=>bindSet(id,k));
+ const manVal=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:null};
+ const fillMan=()=>{const m=SP_MAN[$('#sp-man-sym').value]||{};
+  const set=(id,k)=>{const el=$(id);if(el)el.value=m[k]==null?'':m[k]};
+  set('#sp-man-per','per');set('#sp-man-pbv','pbv');set('#sp-man-roe','roe');set('#sp-man-der','der');
+  set('#sp-man-div','divYield');set('#sp-man-gro','growth');set('#sp-man-fcf','fcf');set('#sp-man-sh','sharesOut');set('#sp-man-nd','netDebt')};
+ $('#sp-man-sym').onchange=fillMan;fillMan();
+ $('#sp-man-save').onclick=()=>{
+  const s=$('#sp-man-sym').value;
+  const o={per:manVal('#sp-man-per'),pbv:manVal('#sp-man-pbv'),roe:manVal('#sp-man-roe'),der:manVal('#sp-man-der'),divYield:manVal('#sp-man-div'),growth:manVal('#sp-man-gro'),fcf:manVal('#sp-man-fcf'),sharesOut:manVal('#sp-man-sh'),netDebt:manVal('#sp-man-nd'),at:new Date().toISOString(),source:'Input manual'};
+  if(o.per==null&&o.pbv==null&&o.roe==null&&o.divYield==null&&o.growth==null&&o.fcf==null&&o.sharesOut==null&&o.netDebt==null&&o.der==null){alert('Isi minimal satu angka.');return}
+  SP_MAN[s]=o;spSaveMan();stockPick();
+ };
+ $('#sp-man-del').onclick=()=>{delete SP_MAN[$('#sp-man-sym').value];spSaveMan();stockPick()};
+}
+// __MODUL_SAHAM_PICKING_v1_END__
 function senti(){
  const nm=v=>v.toFixed(2).replace('.',',');
  if(!NEWS.length)return $('#view').innerHTML=`<h1 class="pg">Sentimen berita</h1><div class="pn"><b>Belum ada berita yang termuat.</b><p class="note" style="margin:6px 0 0">Halaman ini hanya menampilkan berita nyata dari RSS media (CNBC Indonesia, Antara, Tempo, CNBC World Markets). Tidak ada berita contoh yang dipakai sebagai pengganti. Sumber berita diambil oleh <code>scripts/fetch-data.mjs</code>.</p></div>`;
@@ -725,6 +923,148 @@ function portofolio(){
 
 
 
+// __MODUL_PROYEK_FEASIBILITY_v1_START__
+/* ---------- Modul Proyek: feasibility multi-skema ----------
+   Satu proyek, beberapa skema pembiayaan. Investasi awal + arus kas
+   BERSAMA untuk semua skema; yang berbeda hanya struktur pembiayaan
+   (bobot ekuitas, biaya utang, pajak), sehingga tiap skema punya WACC
+   sendiri. Per skema dihitung NPV, IRR, payback sederhana, discounted
+   payback, dan profitability index, lalu dibandingkan + diberi peringkat.
+   Peringkat 1 = NPV tertinggi; tie-break IRR lebih tinggi, lalu payback
+   lebih cepat. State tersimpan di localStorage kunci `di.proyek`.
+   Memakai helper global npv/irr/P/money/bars (tidak ditulis ulang). */
+const PR_KEY='di.proyek';
+function prDefault(){return{inv:1500,cf:'400, 450, 500, 550, 600',rf:7,beta:1.1,erp:6,skema:[
+ {nama:'100% Ekuitas',we:100,kd:9,tx:22},
+ {nama:'70% Ekuitas / 30% Utang',we:70,kd:9,tx:22},
+ {nama:'50% Ekuitas / 50% Utang',we:50,kd:9,tx:22}]}}
+const prNum=(x,d)=>{const v=parseFloat(x);return isFinite(v)?v:d};
+const prEsc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function prSanitize(d){
+ const def=prDefault();
+ if(!d||typeof d!=='object')return def;
+ const inv=prNum(d.inv,def.inv);
+ const out={inv:inv>0?inv:def.inv,
+  cf:typeof d.cf==='string'&&d.cf.trim()?d.cf:def.cf,
+  rf:prNum(d.rf,def.rf),beta:prNum(d.beta,def.beta),erp:prNum(d.erp,def.erp),
+  skema:Array.isArray(d.skema)?d.skema.slice(0,4).map((s,i)=>({nama:s&&typeof s.nama==='string'&&s.nama.trim()?s.nama.slice(0,60):'Skema '+(i+1),
+   we:Math.min(100,Math.max(0,prNum(s&&s.we,50))),
+   kd:Math.max(0,prNum(s&&s.kd,9)),
+   tx:Math.min(100,Math.max(0,prNum(s&&s.tx,22)))})):def.skema};
+ if(!out.skema.length)out.skema=def.skema;
+ return out;
+}
+let PR=prSanitize(store.read(PR_KEY,null));
+const prSave=()=>store.write(PR_KEY,PR);
+const prKe=()=>PR.rf+PR.beta*PR.erp; // biaya ekuitas CAPM, dalam %
+function prWacc(s){const ke=prKe()/100,we=Math.min(100,Math.max(0,s.we))/100;
+ return we*ke+(1-we)*(s.kd/100)*(1-s.tx/100)} // fraksi per tahun
+function prFlows(){return PR.cf.split(',').map(x=>parseFloat(x)).filter(x=>isFinite(x))}
+function prHitung(s){
+ const inv=PR.inv,cf=prFlows(),fl=[-inv,...cf],w=prWacc(s);
+ const N=npv(w,fl),R=irr(fl),pi=inv>0?(N+inv)/inv:null;
+ let cum=-inv,pb=null;
+ for(let i=1;i<fl.length;i++){if(cum+fl[i]>=0){pb=i-1+(-cum)/fl[i];break}cum+=fl[i]}
+ let dcum=-inv,dpb=null;const dc=[-inv];
+ for(let i=1;i<fl.length;i++){const d=fl[i]/Math.pow(1+w,i);dc.push(dcum+d);
+  if(dpb==null&&d>0&&dcum+d>=0)dpb=i-1+(-dcum)/d;dcum+=d}
+ return{w,N,R,pb,dpb,pi,fl,dc};
+}
+function prPeringkat(hs){
+ return hs.map((_,i)=>i).sort((a,b)=>{const A=hs[a].h,B=hs[b].h;
+  if(B.N!==A.N)return B.N-A.N;
+  const ra=A.R==null?-Infinity:A.R,rb=B.R==null?-Infinity:B.R;
+  if(rb!==ra)return rb-ra;
+  const pa=A.pb==null?Infinity:A.pb,pb=B.pb==null?Infinity:B.pb;
+  return pa-pb});
+}
+const prFmtY=v=>v==null?'Belum kembali':v.toFixed(1).replace('.',',')+' tahun';
+const prLayak=h=>h.N>0&&h.R!=null&&h.R>h.w;
+function prRenderSkema(){
+ const el=$('#pr-skema');if(!el)return;
+ el.innerHTML=PR.skema.map((s,i)=>`<div class="pr-row">
+  <label>Nama skema<input id="pr-skema-${i}-nama" value="${prEsc(s.nama)}"></label>
+  <label>Bobot ekuitas (%)<input id="pr-skema-${i}-we" type="number" step="any" min="0" max="100" value="${s.we}"></label>
+  <label>Biaya utang / kd (%)<input id="pr-skema-${i}-kd" type="number" step="any" min="0" value="${s.kd}"></label>
+  <label>Pajak (%)<input id="pr-skema-${i}-tx" type="number" step="any" min="0" value="${s.tx}"></label>
+  <button data-pr-del="${i}" ${PR.skema.length<=1?'disabled':''}>Hapus</button></div>`).join('');
+ PR.skema.forEach((s,i)=>{
+  $('#pr-skema-'+i+'-nama').oninput=e=>{s.nama=e.target.value;prSave();prRender()};
+  [['we','pr-skema-'+i+'-we'],['kd','pr-skema-'+i+'-kd'],['tx','pr-skema-'+i+'-tx']].forEach(([k,id])=>{
+   $('#'+id).oninput=e=>{s[k]=prNum(e.target.value,s[k]);prSave();prRender()}});
+ });
+ el.querySelectorAll('[data-pr-del]').forEach(b=>b.onclick=()=>{PR.skema.splice(+b.dataset.prDel,1);prSave();prRenderSkema();prRender()});
+ const tb=$('#pr-tambah');if(tb)tb.disabled=PR.skema.length>=4;
+}
+function prRender(){
+ const el=$('#pr-hasil');if(!el)return;
+ const keEl=$('#pr-ke');if(keEl)keEl.textContent=P(prKe()/100);
+ const inv=PR.inv,cf=prFlows();
+ if(!(inv>0)||!cf.length){
+  el.innerHTML=`<div class="pn"><b>Isi investasi awal dan arus kas dulu.</b><p class="note" style="margin:6px 0 0">Investasi awal harus lebih dari nol dan arus kas per tahun diisi minimal satu tahun (angka dipisah koma, dalam Rp juta).</p></div>`;return}
+ const hs=PR.skema.map(s=>({s,h:prHitung(s)}));
+ const order=prPeringkat(hs),rankOf={};order.forEach((idx,r)=>rankOf[idx]=r+1);
+ const best=hs[order[0]],bh=best.h;
+ const wMin=Math.min(...hs.map(x=>x.h.w));
+ const pbVals=hs.map(x=>x.h.pb).filter(v=>v!=null),pbMin=pbVals.length?Math.min(...pbVals):null;
+ const kdAT=best.s.kd*(1-best.s.tx/100);
+ let why=`<b>${prEsc(best.s.nama)}</b> menempati peringkat 1 karena NPV-nya tertinggi, <b>${money(bh.N)}</b>. `;
+ why+=`WACC-nya ${P(bh.w)}${bh.w===wMin?' — terendah di antara semua skema, sehingga arus kas masa depan didiskonto paling ringan':''}. `;
+ if(best.s.we<100&&kdAT<prKe())why+=`Skema ini memakai utang ${100-best.s.we}% dengan biaya setelah pajak ${kdAT.toFixed(2).replace('.',',')}%, lebih murah dari biaya ekuitas ${P(prKe()/100)}, sehingga WACC turun. `;
+ why+=bh.R!=null?`IRR ${P(bh.R)} berada di atas WACC ${P(bh.w)}, dan payback ${prFmtY(bh.pb)}${bh.pb!=null&&bh.pb===pbMin?' (tercepat)':''}.`:'IRR tidak terhitung karena arus kas tidak berganti tanda.';
+ const cards=hs.map((x,i)=>{const isBest=i===order[0],h=x.h;
+  return `<section class="pn pr-card${isBest?' pr-terbaik':''}"><h2>${prEsc(x.s.nama)} ${isBest?'★':''}</h2>
+  <p style="margin:-6px 0 12px"><span class="chip ${isBest?'t':''}">Peringkat #${rankOf[i]}${isBest?' · Terbaik':''}</span></p>
+  <dl><div><dt>WACC</dt><dd>${P(h.w)}</dd></div>
+  <div><dt>NPV</dt><dd class="${cls(h.N)}">${money(h.N)}</dd></div>
+  <div><dt>IRR</dt><dd>${h.R==null?'—':P(h.R)}</dd></div>
+  <div><dt>Payback sederhana</dt><dd>${prFmtY(h.pb)}</dd></div>
+  <div><dt>Discounted payback</dt><dd>${prFmtY(h.dpb)}</dd></div>
+  <div><dt>Profitability index</dt><dd>${h.pi==null?'—':h.pi.toFixed(2).replace('.',',')}</dd></div></dl>
+  <p class="note">${h.R==null?'IRR tidak ditemukan: arus kas tidak berganti tanda. ':''}${prLayak(h)?'Layak menurut NPV dan IRR pada asumsi ini.':'Belum layak menurut NPV atau IRR pada asumsi ini.'}</p></section>`}).join('');
+ const row=(l,f)=>`<tr><td>${l}</td>${hs.map((x,i)=>`<td class="${i===order[0]?'pr-best':''}">${f(x.h)}</td>`).join('')}</tr>`;
+ const d=[-.02,-.01,0,.01,.02],m=[.8,.9,1,1.1,1.2];
+ const sens=`<div class="pn sc"><h2>Sensitivitas NPV — skema terbaik (${prEsc(best.s.nama)})</h2><table><tr><th>Diskonto \\ arus kas</th>${m.map(x=>`<th>${Math.round(x*100)}%</th>`).join('')}</tr>${d.map(y=>`<tr><td>${P(bh.w+y)}</td>${m.map(x=>{const z=npv(bh.w+y,[bh.fl[0],...bh.fl.slice(1).map(q=>q*x)]);return `<td class="${z>=0?'hu':'hd'}">${money(z)}</td>`}).join('')}</tr>`).join('')}</table>
+ <p class="note">Baris = tingkat diskonto di sekitar WACC skema terbaik (${P(bh.w)} ± 2pp); kolom = arus kas tahunan diskalakan 80–120%.</p></div>`;
+ el.innerHTML=`<div class="pr-grid">${cards}</div>
+ <div class="pn sc"><h2>Perbandingan skema</h2><table><tr><th>Ukuran</th>${hs.map((x,i)=>`<th class="${i===order[0]?'pr-best':''}">${prEsc(x.s.nama)}${i===order[0]?' ★':''}</th>`).join('')}</tr>
+ ${row('WACC',h=>P(h.w))}${row('NPV',h=>money(h.N))}${row('IRR',h=>h.R==null?'—':P(h.R))}
+ ${row('Payback sederhana',h=>prFmtY(h.pb))}${row('Discounted payback',h=>prFmtY(h.dpb))}
+ ${row('Profitability index',h=>h.pi==null?'—':h.pi.toFixed(2).replace('.',','))}
+ ${row('Peringkat',h=>'#'+rankOf[hs.findIndex(x=>x.h===h)])}</table></div>
+ <div class="pn"><h2>Kenapa skema terbaik menang?</h2><p style="margin:0">${why}</p></div>
+ <div class="pn"><h2>Arus kas kumulatif terdiskonto — skema terbaik (${prEsc(best.s.nama)})</h2>${bars(bh.dc)}<p class="note">Tahun 0 sampai ${bh.fl.length-1}, didiskonto dengan WACC skema terbaik (${P(bh.w)}). Batang melewati nol pada tahun discounted payback.</p></div>
+ ${sens}
+ <p class="note">Semua angka dalam Rp juta (investasi awal dan arus kas diinput dalam Rp juta). Hasil bergantung pada asumsi dan bukan saran investasi.</p>`;
+}
+function projectFeas(){
+ $('#view').innerHTML=`<h1 class="pg">Proyek</h1>
+ <p class="note" style="margin:-10px 0 22px">Satu proyek, beberapa cara membiayainya. Investasi awal dan arus kas sama untuk semua skema — yang berbeda hanya struktur pembiayaannya, sehingga tiap skema punya WACC sendiri. Peringkat 1 = NPV tertinggi (tie-break: IRR lebih tinggi, lalu payback lebih cepat).</p>
+ <div class="grid3"><fieldset><legend>Asumsi pasar (bersama)</legend>
+  <label>Suku bunga bebas risiko (%)<input id="pr-rf" type="number" step="any" value="${PR.rf}"></label>
+  <label>Beta<input id="pr-beta" type="number" step="any" value="${PR.beta}"></label>
+  <label>Premi risiko ekuitas (%)<input id="pr-erp" type="number" step="any" value="${PR.erp}"></label>
+  <p class="note">Biaya ekuitas (CAPM) = rf + beta × premi risiko = <b id="pr-ke"></b>. Berlaku untuk semua skema.</p></fieldset>
+ <fieldset><legend>Proyek (bersama untuk semua skema)</legend>
+  <label>Investasi awal (Rp juta)<input id="pr-inv" type="number" step="any" value="${PR.inv}"></label>
+  <label>Arus kas per tahun (Rp juta, pisahkan koma)<input id="pr-cf" value="${prEsc(PR.cf)}"></label>
+  <p class="note">Arus kas tahun ke-1 sampai ke-n, dipisah koma. Contoh: 400, 450, 500, 550, 600.</p></fieldset>
+ <fieldset><legend>Data tersimpan</legend>
+  <p class="note" style="margin:0">Skema dan input proyek tersimpan otomatis di peramban ini (localStorage, kunci <code>di.proyek</code>) dan dimuat kembali saat halaman dibuka.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="pr-reset">Reset ke default</button></div></fieldset></div>
+ <section class="pn"><h2>Skema pembiayaan</h2><div id="pr-skema"></div>
+ <button id="pr-tambah">+ Tambah skema</button>
+ <p class="note">Maksimal 4 skema. Bobot ekuitas 100% berarti tanpa utang (biaya utang tidak berpengaruh). Biaya utang dipakai setelah pajak: kd × (1 − pajak).</p></section>
+ <div id="pr-hasil"></div>`;
+ const bindNum=(id,key)=>{$('#'+id).oninput=e=>{PR[key]=prNum(e.target.value,PR[key]);prSave();prRender()}};
+ bindNum('pr-rf','rf');bindNum('pr-beta','beta');bindNum('pr-erp','erp');bindNum('pr-inv','inv');
+ $('#pr-cf').oninput=e=>{PR.cf=e.target.value;prSave();prRender()};
+ $('#pr-reset').onclick=()=>{if(!confirm('Kembalikan input proyek dan skema ke nilai default?'))return;PR=prDefault();prSave();projectFeas()};
+ $('#pr-tambah').onclick=()=>{if(PR.skema.length>=4)return;PR.skema.push({nama:'Skema '+(PR.skema.length+1),we:50,kd:9,tx:22});prSave();prRenderSkema();prRender()};
+ prRenderSkema();prRender();
+}
+// __MODUL_PROYEK_FEASIBILITY_v1_END__
+
 /* ---------- Asisten AI ---------- */
 /* Untuk memakai model AI sungguhan: isi endpoint dengan alamat backend Anda (mis. '/api/chat').
    API key HARUS disimpan di backend, jangan pernah di file ini. Backend menerima {messages, context} dan mengembalikan {reply}. */
@@ -756,8 +1096,8 @@ async function send(t){t=(t||'').trim();if(!t||busy)return;CH.push({r:'me',t});b
  try{await new Promise(r=>setTimeout(r,500+Math.random()*500));const rp=await AI.ask(CH.map(m=>({role:m.r==='me'?'user':'assistant',content:m.t})),ctx());CH.push({r:'ai',t:rp})}
  catch(e){CH.push({r:'ai',t:'Asisten tidak dapat dihubungi. Periksa koneksi ke backend, lalu kirim ulang pesan Anda.'})}
  busy=false;drawLog()}
-const PN={'':'Ringkasan',portofolio:'Portofolio',watchlist:'Watchlist',grafik:'Grafik',alert:'Alert',kelayakan:'Kelayakan',sentimen:'Sentimen'};
-const PQ={'':['Ringkas portofolio saya','Aset mana yang paling untung dan paling rugi?','Bagaimana alokasi aset saya?'],portofolio:['Bagaimana alokasi aset saya?','Aset mana yang paling untung dan paling rugi?'],watchlist:['Aset mana yang naik paling tinggi hari ini?','Jelaskan sumber data halaman ini'],grafik:['Apa arti RSI dan MACD?','Jelaskan sumber data halaman ini'],alert:['Apakah ada alert yang terpicu?','Jelaskan cara kerja alert'],kelayakan:['Jelaskan hasil di layar','Jelaskan arti NPV, IRR, dan WACC'],sentimen:['Bagaimana sentimen berita saat ini?']};
+const PN={'':'Ringkasan',portofolio:'Portofolio',watchlist:'Watchlist',grafik:'Grafik',alert:'Alert',kelayakan:'Kelayakan',saham:'Pilih Saham',proyek:'Proyek',sentimen:'Sentimen'};
+const PQ={'':['Ringkas portofolio saya','Aset mana yang paling untung dan paling rugi?','Bagaimana alokasi aset saya?'],portofolio:['Bagaimana alokasi aset saya?','Aset mana yang paling untung dan paling rugi?'],watchlist:['Aset mana yang naik paling tinggi hari ini?','Jelaskan sumber data halaman ini'],grafik:['Apa arti RSI dan MACD?','Jelaskan sumber data halaman ini'],alert:['Apakah ada alert yang terpicu?','Jelaskan cara kerja alert'],kelayakan:['Jelaskan hasil di layar','Jelaskan arti NPV, IRR, dan WACC'],saham:['Saham mana yang paling layak diteliti?','Jelaskan skor saham ini'],proyek:['Skema pembiayaan mana yang paling baik?','Jelaskan arti NPV, IRR, dan payback'],sentimen:['Bagaimana sentimen berita saat ini?']};
 const pg=()=>{const b=location.hash.slice(1).split('/')[0];return PN[b]!==undefined?b:''};
 let CM='open';try{CM=localStorage.getItem('aim')||'open'}catch(e){}
 function pageCtx(){const p=pg(),o={page:PN[p]};if(p==='')Object.assign(o,{range:RG+' hari',disembunyikan:[...HID]});if(p==='watchlist')o.filter=WF;if(p==='grafik')o.aset=CHS;if(p==='kelayakan'&&$('#res'))o.hasil=$('#res').innerText.replace(/\n+/g,'; ');return o}
@@ -777,8 +1117,8 @@ function mountChat(){
 }
 
 /* ---------- Router dan data live ---------- */
-const R={'':dash,portofolio,watchlist:watch,grafik,alert:alerts,kelayakan:feas,sentimen:senti};
-const NAV=[['','Ringkasan'],['portofolio','Portofolio'],['watchlist','Watchlist'],['grafik','Grafik'],['alert','Alert'],['kelayakan','Kelayakan'],['sentimen','Sentimen']];
+const R={'':dash,portofolio,watchlist:watch,grafik,alert:alerts,kelayakan:feas,saham:stockPick,proyek:projectFeas,sentimen:senti};
+const NAV=[['','Ringkasan'],['portofolio','Portofolio'],['watchlist','Watchlist'],['grafik','Grafik'],['alert','Alert'],['kelayakan','Kelayakan'],['saham','Pilih Saham'],['proyek','Proyek'],['sentimen','Sentimen']];
 function route(){const h=location.hash.slice(1),b=h.split('/')[0];(R[b]||dash)();ctxUI();
  $('#nav').innerHTML=`<div class="brand"><b>DOIntelligence</b><p class="ds2">Your AI-powered personal financial companion.</p></div>`+NAV.map(([k,l])=>`<a href="#${k}" class="${k===b?'on':''}">${l}</a>`).join('')+`<small>Copyright (c) 2026 sxpistols. All rights reserved.</small>`}
 function stat(){const live=W.filter(a=>a.live).length,man=W.filter(a=>a.manual).length,dum=W.filter(a=>!a.live&&!a.manual).length;

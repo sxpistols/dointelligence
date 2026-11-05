@@ -45,11 +45,10 @@ Single user, berbahasa Indonesia, mata uang IDR, single-page app.
 
 Pencatatan keuangan pribadi: pemasukan/pengeluaran, budget, target tabungan, tagihan rutin, utang, dan laporan keuangan.
 
-## Modul Tim & Workspace (bagian dari rebuild)
+## Modul Tim (bagian dari rebuild)
 
 - Section **Tim**: analisa tim untuk GM Marketing — hasil kerja tim, progress vs target/KPI, analisa laporan data. (Detail KPI, sumber data, ukuran tim, dan multi-user masih menunggu jawaban GM.)
-- **Workspace kolaborasi** bergaya gather.town sebagai halaman utama/hub, dengan avatar, chat, dan widget progress tim.
-- Workspace real-time **TIDAK bisa jalan hanya dengan hosting statis + localStorage**. Arsitektur realtime (mis. Supabase Realtime, Firebase, atau server WebSocket kecil) beserta estimasi biayanya WAJIB diusulkan dan disetujui user sebelum dibangun. Tanpa backend, workspace hanya berjalan lokal/single-user dengan avatar simulasi — dan keterbatasan ini harus dilabeli dengan jujur.
+- **Workspace kolaborasi DIBATALKAN 2026-11-06** (user memutuskan fitur workspace bergaya gather.town tidak jadi diadakan) — jangan dibangun, jangan ditambahkan ke aplikasi.
 
 ## Aturan pembangunan
 

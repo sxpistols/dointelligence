@@ -12,6 +12,12 @@
  *  - Frankfurter (ECB)        : kurs USD/IDR dan pasangan lain.
  *  - RSS media                : CNBC Indonesia, Antara Ekonomi, Tempo Bisnis,
  *                               CNBC World Markets.
+ *  - Yahoo Finance quoteSummary: fundamental saham IDX (PER, PBV, ROE, DER,
+ *                               dividen, growth, FCF) — butuh cookie + crumb
+ *                               Yahoo (diambil dari fc.yahoo.com), tanpa key.
+ *                               Untuk bank, Yahoo tidak menyediakan DER dan
+ *                               FCF yang bermakna, jadi keduanya dibiarkan
+ *                               kosong dan tidak masuk skor di aplikasi.
  *
  * Aturan: kalau sebuah sumber gagal, angka karangan TIDAK pernah ditulis.
  * Data lama boleh dibawa sebagai cadangan, tetapi selalu memakai `asOf` aslinya
@@ -200,6 +206,101 @@ async function quote({ ticker, symbol, name, cls, range = '1y' }) {
   };
 }
 
+/* ---------------- fundamental (quoteSummary, butuh crumb) ----------------
+   Endpoint v10 tanpa crumb mengembalikan 401 (diuji dari VM, 2026-11-06).
+   Alur yang berhasil: GET fc.yahoo.com (ambil cookie) -> GET
+   /v1/test/getcrumb -> GET quoteSummary dengan ?crumb=. Satu crumb dipakai
+   untuk semua ticker. Gagal di satu ticker tidak menggagalkan yang lain;
+   bila crumb gagal, seluruh langkah dilewati dan UI memakai input manual /
+   nilai contoh berlabel Dummy. Jalur proxy r.jina.ai TIDAK dipakai di sini
+   karena Yahoo mengembalikan 401 lewat proxy itu (diuji 2026-11-06). */
+async function yahooCrumb() {
+  const r1 = await fetch('https://fc.yahoo.com', { headers: { 'User-Agent': UA }, redirect: 'manual' });
+  const cookie = (r1.headers.get('set-cookie') || '').split(';')[0];
+  if (!cookie) return null;
+  // getcrumb di query1 menggantung dari VM (diuji 2026-11-06: >25 dtk, tanpa
+  // respons), sementara query2 menjawab 200 dalam ~4 dtk — coba keduanya.
+  for (const host of ['query1', 'query2']) {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 15000);
+    try {
+      const r2 = await fetch(`https://${host}.finance.yahoo.com/v1/test/getcrumb`, {
+        headers: { 'User-Agent': UA, Cookie: cookie },
+        signal: ac.signal,
+      });
+      if (!r2.ok) continue;
+      const crumb = (await r2.text()).trim();
+      if (!crumb || crumb.length > 64) continue;
+      return { cookie, crumb, host };
+    } catch {
+      continue;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+  return null;
+}
+
+async function yahooFund(ticker, auth) {
+  const mods = 'defaultKeyStatistics,financialData,summaryDetail';
+  const hosts = [auth.host || 'query1', auth.host === 'query2' ? 'query1' : 'query2'];
+  let lastErr;
+  for (let i = 0; i < 2; i++) {
+    const url = `https://${hosts[i]}.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${mods}&crumb=${encodeURIComponent(auth.crumb)}`;
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 20000);
+      const res = await fetch(url, {
+        headers: { 'User-Agent': UA, Accept: 'application/json', Cookie: auth.cookie },
+        signal: ac.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) throw new Error(`quoteSummary HTTP ${res.status}`);
+      const j = await res.json();
+      const r0 = j?.quoteSummary?.result?.[0];
+      if (!r0) throw new Error('quoteSummary kosong');
+      const ks = r0.defaultKeyStatistics || {};
+      const fd = r0.financialData || {};
+      const sd = r0.summaryDetail || {};
+      const raw = (o, k) => {
+        const v = o?.[k]?.raw;
+        return typeof v === 'number' && isFinite(v) ? v : null;
+      };
+      const pct2 = (v) => (v == null ? null : Math.round(v * 10000) / 100); // fraksi -> persen
+      const toMiliar = (v) => (v == null ? null : Math.round((v / 1e9) * 100) / 100);
+      const cp = raw(fd, 'currentPrice');
+      const eps = raw(ks, 'trailingEps');
+      const per = raw(sd, 'trailingPE') ?? (cp && eps ? Math.round((cp / eps) * 100) / 100 : null);
+      const debt = raw(fd, 'totalDebt');
+      const cash = raw(fd, 'totalCash');
+      const shOut = raw(ks, 'sharesOutstanding');
+      // Yahoo mengembalikan debtToEquity IDX dalam persen (mis. TLKM 56,278 = 56,28% = 0,56x).
+      // Normalisasi ke rasio di sini agar market.json tidak menyimpan nilai persen mentah.
+      const derRaw = raw(fd, 'debtToEquity');
+      const der = derRaw == null ? null : Math.round((derRaw > 10 ? derRaw / 100 : derRaw) * 100) / 100;
+      return {
+        per,
+        pbv: raw(ks, 'priceToBook'),
+        roe: pct2(raw(fd, 'returnOnEquity')),
+        der,
+        divYield: pct2(raw(sd, 'trailingAnnualDividendYield') ?? raw(sd, 'dividendYield')),
+        growth: pct2(raw(fd, 'earningsGrowth') ?? raw(fd, 'revenueGrowth')),
+        fcf: toMiliar(raw(fd, 'freeCashflow')),
+        sharesOut: toMiliar(shOut),
+        netDebt: debt == null || cash == null ? null : toMiliar(debt - cash),
+        asOf: new Date().toISOString(),
+        source: 'Yahoo Finance quoteSummary',
+        sourceUrl: `https://finance.yahoo.com/quote/${encodeURIComponent(ticker)}`,
+      };
+    } catch (e) {
+      lastErr = e;
+      await sleep(1500);
+    }
+  }
+  log(`   fund ${ticker} gagal: ${lastErr?.message || lastErr}`);
+  return null;
+}
+
 /* ---------------- kurs ---------------- */
 async function getFx() {
   const out = {
@@ -333,6 +434,23 @@ async function collect(list, cls, range) {
 
 await collect(INDEX, 'Indeks', '1y');
 await collect(IDX, 'Saham IDX', '1y');
+
+/* fundamental IDX via quoteSummary (butuh crumb; gagal = dilewati, UI
+   memakai input manual / nilai contoh berlabel Dummy) */
+const authFund = await step('crumb fundamental', yahooCrumb);
+if (authFund) {
+  for (const a of assets.filter((x) => x.cls === 'Saham IDX')) {
+    const f = await step('fund ' + a.symbol, () => yahooFund(a.ticker, authFund));
+    if (f) {
+      a.fund = f;
+      log(`  fund ${a.symbol} PER ${f.per ?? '—'} PBV ${f.pbv ?? '—'} ROE ${f.roe ?? '—'}% div ${f.divYield ?? '—'}%`);
+    }
+    await sleep(800);
+  }
+} else {
+  log('[lewati] fundamental: crumb Yahoo tidak didapat; fundamental dilewati (UI memakai input manual/contoh)');
+}
+
 await collect(GLOBAL, 'Saham global', '1y');
 await collect(FXPAIRS, 'Forex', '6mo');
 
@@ -408,6 +526,12 @@ if (prevMarket?.assets) {
     assets.push({ ...a, carriedForward: true });
     carried++;
   }
+  // fundamental: bila pengambilan baru gagal untuk satu saham, bawa fund
+  // publikasi sebelumnya (dengan asOf aslinya + penanda carried)
+  const prevFund = new Map(prevMarket.assets.filter((a) => a.fund).map((a) => [a.symbol, a.fund]));
+  for (const a of assets) {
+    if (!a.fund && prevFund.has(a.symbol)) a.fund = { ...prevFund.get(a.symbol), carried: true };
+  }
 }
 if (prevHistory?.series) {
   for (const [sym, s] of Object.entries(prevHistory.series)) {
@@ -463,6 +587,11 @@ const market = {
       cls: 'Harga saham real-time',
       reason:
         'Yahoo Finance memberi harga tertunda/penutupan. Angka pada aplikasi bukan kuotasi real-time bursa.',
+    },
+    {
+      cls: 'Fundamental (DER, FCF bank)',
+      reason:
+        'Yahoo quoteSummary tidak menyediakan DER dan FCF yang bermakna untuk bank (definisi utang/arus kas bank berbeda), jadi kedua angka itu kosong untuk BBCA/BBRI/BMRI dan tidak masuk skor. Dividen memakai trailing annual dividend yield Yahoo.',
     },
   ],
   errors,
